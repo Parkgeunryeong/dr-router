@@ -1,0 +1,24 @@
+# --- 웹 서버 ---
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+
+# --- 외부 API 호출 ---
+requests
+
+# --- 에이전트 ---
+langgraph
+langchain
+
+# --- RAG (Vector DB) ---
+chromadb
+
+# --- LLM (GPT / OpenAI) ---
+langchain-openai          # 수업에서 제공하는 OpenAI 키 사용
+
+# --- 임베딩 (로컬 한국어, 무료) ---
+sentence-transformers
+
+# --- 확장: 음성 문진 ---
+# openai-whisper

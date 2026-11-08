@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>이상현 역할 (상세) · 닥터라우터 가이드</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Poppins:wght@600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/guide.css">
+</head>
+<body>
+<header class="nav"><div class="nav-in">
+  <span class="brand"><span class="mark"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" fill="#fff"/></svg></span>닥터라우터 <span class="en">Guide</span></span>
+  <a class="item" href="index.html">홈</a>
+  <a class="item" href="flow.html">프로젝트 흐름</a>
+  <a class="item" href="setup.html">세팅 방법</a>
+  <a class="item" href="role-a.html">박근령</a>
+  <a class="item" href="role-b.html">박태준</a>
+  <a class="item" href="role-c.html">최건</a>
+  <a class="item active" href="role-d.html">이상현</a>
+  <a class="item" href="role-e.html">고원영</a>
+</div></header>
+
+<main class="wrap">
+  <p class="eyebrow">Role · 이상현 (상세 가이드)</p>
+  <h1>산출물 관리 (문서)</h1>
+  <p class="lead">프로젝트의 공식 문서 — <b>기획서 · 요구사항 정의서 · 보고서</b>를 작성하고 최신 상태로 관리합니다.</p>
+
+  <div class="callout"><b>담당 범위</b> — 공식 문서 작성·정리·일관성 관리. <br>※ 발표자료, 개발 가이드, 설계문서(데이터흐름·아키텍처)는 <b>팀장(박근령)</b>이 담당하므로 D 범위에서 제외.</div>
+
+  <h2>담당 산출물</h2>
+  <table>
+    <tr><th>문서</th><th>내용</th><th>비고</th></tr>
+    <tr><td>기획서 (교수님 양식)</td><td>Background·Goal·기능·기술스택·BM 등</td><td>양식 고정, 최신 내용 반영</td></tr>
+    <tr><td>요구사항 정의서</td><td>기능/비기능 요구사항, 유스케이스</td><td>★ D의 핵심 산출물</td></tr>
+    <tr><td>중간 / 최종 보고서</td><td>진행 상황, 결과(평가), 결론</td><td>평가 결과는 고원영에게서</td></tr>
+  </table>
+
+  <h1 style="font-size:26px;margin-top:40px;border-top:2px solid var(--soft);padding-top:28px">PART 1 · 요구사항 정의서 작성 (핵심)</h1>
+  <p>"무엇을 만들 것인가"를 문서로 못박는 작업이에요. 아래 4가지 묶음으로 구성하면 깔끔합니다.</p>
+
+  <h3>① 기능 요구사항 (FR)</h3>
+  <p>시스템이 <b>해야 하는 일</b>. "~할 수 있어야 한다" 형태로. 각 항목에 ID·우선순위.</p>
+  <table>
+    <tr><th>ID</th><th>요구사항</th><th>우선순위</th></tr>
+    <tr><td>FR-1</td><td>사용자는 증상을 자연어(텍스트)로 입력할 수 있어야 한다</td><td>필수</td></tr>
+    <tr><td>FR-2</td><td>정보가 부족하면 시스템은 추가 질문을 되물을 수 있어야 한다</td><td>필수</td></tr>
+    <tr><td>FR-3</td><td>시스템은 증상에 맞는 진료과를 근거와 함께 추천(Top-3)해야 한다</td><td>필수</td></tr>
+    <tr><td>FR-4</td><td>시스템은 주변 병원·약국·응급실을 안내해야 한다</td><td>필수</td></tr>
+    <tr><td>FR-5</td><td>응급 증상이면 분류를 건너뛰고 119·응급실을 즉시 안내해야 한다</td><td>필수</td></tr>
+    <tr><td>FR-6</td><td>(확장) 사용자는 음성으로 증상을 입력할 수 있다</td><td>선택</td></tr>
+  </table>
+
+  <h3>② 비기능 요구사항 (NFR)</h3>
+  <p>시스템의 <b>품질·제약</b>. 성능·안전·보안 등.</p>
+  <table>
+    <tr><th>ID</th><th>요구사항</th></tr>
+    <tr><td>NFR-1 (안전)</td><td>모든 응답에 "의학적 진단이 아닌 참고용 안내"임을 표시한다</td></tr>
+    <tr><td>NFR-2 (안전)</td><td>응급 판별은 미탐(놓침)을 최소화하도록 보수적으로 동작한다</td></tr>
+    <tr><td>NFR-3 (가용성)</td><td>외부 API 장애 시에도 서비스가 중단되지 않는다(예외 처리·폴백)</td></tr>
+    <tr><td>NFR-4 (성능)</td><td>일반 질의 응답은 수 초 이내에 반환한다</td></tr>
+    <tr><td>NFR-5 (보안)</td><td>API 키는 코드에 하드코딩하지 않고 .env로 관리한다</td></tr>
+  </table>
+
+  <h3>③ 사용자 시나리오 (유스케이스)</h3>
+  <p>대표 흐름을 글로. 예:</p>
+<pre><code>[일반 시나리오]
+1. 사용자가 "오른쪽 아랫배가 아프고 열이 나요" 입력
+2. 시스템이 통증 양상·동반 증상을 되물음
+3. 사용자가 추가 답변
+4. 시스템이 '외과(87%)' 등 Top-3 진료과를 근거와 함께 제시
+5. 주변 외과 병원 목록을 지도/리스트로 안내
+
+[응급 시나리오]
+1. 사용자가 "갑자기 가슴이 쥐어짜듯 아파요" 입력
+2. 시스템이 응급으로 판단 → 즉시 119·응급실 안내</code></pre>
+
+  <h3>④ 제약사항</h3>
+  <ul>
+    <li>공공데이터포털 개발계정 트래픽 제한(일일 한도)</li>
+    <li>LLM은 수업 제공 GPT(OpenAI) 키 사용</li>
+    <li>로컬/시연 환경에서 동작 (상시 운영 아님)</li>
+  </ul>
+
+  <h1 style="font-size:26px;margin-top:48px;border-top:2px solid var(--soft);padding-top:28px">PART 2 · 기획서 관리</h1>
+  <ul>
+    <li>교수님 양식(틀)은 유지하고, <b>내용만 최신</b>으로 반영 (기술스택·흐름도가 바뀌면 동기화)</li>
+    <li>개발이 진행되며 바뀐 결정(예: 프론트+FastAPI, GPT 확정 등)을 기획서에 반영</li>
+    <li>최신본 1개만 유지, 이전 버전은 날짜로 구분하거나 정리</li>
+  </ul>
+
+  <h1 style="font-size:26px;margin-top:48px;border-top:2px solid var(--soft);padding-top:28px">PART 3 · 보고서</h1>
+  <p>중간/최종 보고서 뼈대:</p>
+<pre><code># 최종 보고서
+1. 프로젝트 개요 (주제·목표)
+2. 시스템 구성 (흐름·기술스택)      ← 설계문서(박근령)에서 가져옴
+3. 구현 내용 (기능별)
+4. 평가 결과 (Top-3 정확도 등)       ← 고원영에게서
+5. 한계 및 향후 계획
+6. 역할 분담 / 소감</code></pre>
+  <p>2·4번처럼 다른 담당의 산출물을 <b>받아서 엮는</b> 게 D의 역할이에요.</p>
+
+  <h1 style="font-size:26px;margin-top:48px;border-top:2px solid var(--soft);padding-top:28px">PART 4 · 용어·형식 통일</h1>
+  <p>문서마다 용어가 다르면 평가자가 헷갈려요. 아래를 표준으로 고정하고 모든 문서를 맞추세요.</p>
+  <table>
+    <tr><th>구분</th><th>표준 표기</th><th>쓰지 말 것</th></tr>
+    <tr><td>서비스명</td><td>닥터라우터 (Dr.Router)</td><td>닥터라우트, DrRouter</td></tr>
+    <tr><td>한 줄 소개</td><td>증상을 말하면 알맞은 진료과로 안내하는 AI 에이전트</td><td>자가진단, 진단 앱</td></tr>
+    <tr><td>기능명</td><td>진료과 분류 · 의료기관 안내 · 응급 가드레일</td><td>병원추천, 진단</td></tr>
+    <tr><td>기술 표기</td><td>LangGraph · FastAPI · Chroma · RAG · GPT(OpenAI)</td><td>Streamlit(옛 계획), 랭그래프</td></tr>
+    <tr><td>영문 약어</td><td>AI(대문자), API, RAG, FR/NFR</td><td>Ai, api</td></tr>
+  </table>
+
+  <h2>문서도 git으로 (가벼운 버전)</h2>
+  <p>문서가 저장소에 들어간다면 세팅 페이지의 브랜치+PR 방식을 그대로 씁니다. (hwp 같은 제출 문서는 제출 폴더에서 관리해도 됨)</p>
+<pre><code>git checkout -b docs/sanghyeon-requirements
+# 문서 작성
+git add . &amp;&amp; git commit -m "docs: 요구사항 정의서 초안"
+git push -u origin docs/sanghyeon-requirements</code></pre>
+
+  <h2>최종 체크리스트</h2>
+  <ul>
+    <li>□ 요구사항 정의서 (FR · NFR · 유스케이스 · 제약) 작성</li>
+    <li>□ 기획서 최신 내용 반영 (바뀐 결정 동기화)</li>
+    <li>□ 중간/최종 보고서 작성 — 평가 결과 반영</li>
+    <li>□ 표준 용어집대로 문서 전체 통일</li>
+    <li>□ 제출 문서 형식·마감 확인</li>
+  </ul>
+
+  <div class="callout ok"><b>팁</b> — 요구사항 정의서는 개발 초반에 한 번 잘 써두면, 각자 "내가 뭘 만들어야 하는지"의 기준이 돼요. FR 목록이 곧 구현 체크리스트가 됩니다.</div>
+
+  <div class="pager"><a href="role-c.html">← 최건</a><a href="role-e.html">고원영 역할 →</a></div>
+</main>
+<div class="footer">닥터라우터(Dr.Router) 개발 가이드 · 이상현 (상세)</div>
+</body>
+</html>

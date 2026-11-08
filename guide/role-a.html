@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>박근령 역할 (상세) · 닥터라우터 가이드</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Poppins:wght@600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/guide.css">
+</head>
+<body>
+<header class="nav"><div class="nav-in">
+  <span class="brand"><span class="mark"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" fill="#fff"/></svg></span>닥터라우터 <span class="en">Guide</span></span>
+  <a class="item" href="index.html">홈</a>
+  <a class="item" href="flow.html">프로젝트 흐름</a>
+  <a class="item" href="setup.html">세팅 방법</a>
+  <a class="item active" href="role-a.html">박근령</a>
+  <a class="item" href="role-b.html">박태준</a>
+  <a class="item" href="role-c.html">최건</a>
+  <a class="item" href="role-d.html">이상현</a>
+  <a class="item" href="role-e.html">고원영</a>
+</div></header>
+
+<main class="wrap">
+  <p class="eyebrow">Role · 박근령 (팀장 · 상세 가이드)</p>
+  <h1>에이전트 코어 · 흐름 설계</h1>
+  <p class="lead">당신은 프로젝트의 <b>심장과 뼈대</b>를 담당합니다. 각자 만든 노드를 LangGraph 그래프로 엮어 하나로 돌아가게 하는 것이 목표예요.</p>
+
+  <div class="callout warn"><b>가장 중요한 원칙</b> — ① <b>State 스키마를 맨 먼저 확정</b>하고, ② <b>스텁(빈 껍데기)으로 전체를 먼저 관통</b>시키세요. 그래야 나머지 4명이 각자 노드를 채워넣기만 하면 됩니다. "완성된 노드를 기다렸다 합치기"는 금물.</div>
+
+  <h2>STEP 0 · ★ State 스키마 확정 (제일 먼저!)</h2>
+  <p><code>backend/agent/state.py</code>는 <b>모든 노드가 공유하는 계약</b>입니다. 첫날 팀 회의에서 확정하고 공지하세요. (이미 초안 있음)</p>
+<pre><code>from typing import TypedDict, List, Optional
+
+class Department(TypedDict):
+    name: str; score: float; reason: str
+
+class Hospital(TypedDict):
+    name: str; dept: str; distance_m: int; is_open: bool; phone: Optional[str]
+
+class AgentState(TypedDict, total=False):
+    user_input: str            # 이번 턴 사용자 발화
+    history: List[dict]        # 이전 대화(Memory)
+    symptoms: List[str]        # ① collect
+    need_more_info: bool       # ① 되물음 여부
+    emergency: bool            # ② triage
+    departments: List[Department]   # ③ classify
+    location: dict             # {"lat","lng"}
+    hospitals: List[Hospital]  # ④ search
+    final_message: str         # ⑤ 최종 메시지</code></pre>
+  <div class="callout"><b>LangGraph 동작 원리</b> — 각 노드는 State를 받아 <b>바뀐 필드만 담은 dict를 return</b>하면, LangGraph가 알아서 State에 병합해 다음 노드로 넘깁니다. 그래서 노드끼리 직접 데이터를 주고받지 않아요 — 전부 State를 통해서.</div>
+
+  <h2>STEP 1 · 그래프 구조 설계</h2>
+  <p>단일 턴 기준으로 이렇게 흐릅니다. 분기 2개(되물음·응급)가 핵심이에요.</p>
+  <div class="diagram">
+    <svg viewBox="0 0 760 770" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="bh" markerWidth="10" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a6fb5"/></marker>
+        <marker id="rh" markerWidth="10" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#e0564e"/></marker>
+      </defs>
+      <!-- 메인 스파인 -->
+      <rect x="140" y="18" width="140" height="36" rx="18" fill="#eef4fb" stroke="#1a6fb5" stroke-width="1.5"/>
+      <text x="210" y="41" text-anchor="middle" font-size="15" font-weight="700" fill="#14304d">START</text>
+      <rect x="115" y="80" width="190" height="56" rx="12" fill="#f6f9fc" stroke="#cfe0f2" stroke-width="1.5"/>
+      <text x="210" y="113" text-anchor="middle" font-size="16" font-weight="700" fill="#14304d">증상 수집 (collect)</text>
+      <polygon points="210,156 285,196 210,236 135,196" fill="#eef4fb" stroke="#1a6fb5" stroke-width="1.5"/>
+      <text x="210" y="201" text-anchor="middle" font-size="14" font-weight="700" fill="#14304d">정보 충분?</text>
+      <rect x="115" y="266" width="190" height="56" rx="12" fill="#fdf1f0" stroke="#e0564e" stroke-width="1.8"/>
+      <text x="210" y="299" text-anchor="middle" font-size="16" font-weight="700" fill="#c0433b">응급도 판별 (triage)</text>
+      <polygon points="210,342 285,382 210,422 135,382" fill="#fdf1f0" stroke="#e0564e" stroke-width="1.5"/>
+      <text x="210" y="387" text-anchor="middle" font-size="14" font-weight="700" fill="#c0433b">응급?</text>
+      <rect x="115" y="452" width="190" height="56" rx="12" fill="#f6f9fc" stroke="#cfe0f2" stroke-width="1.5"/>
+      <text x="210" y="485" text-anchor="middle" font-size="16" font-weight="700" fill="#14304d">진료과 분류 (classify)</text>
+      <rect x="115" y="538" width="190" height="56" rx="12" fill="#f6f9fc" stroke="#cfe0f2" stroke-width="1.5"/>
+      <text x="210" y="571" text-anchor="middle" font-size="16" font-weight="700" fill="#14304d">병원 검색 (search)</text>
+      <rect x="115" y="624" width="190" height="56" rx="12" fill="#f6f9fc" stroke="#cfe0f2" stroke-width="1.5"/>
+      <text x="210" y="657" text-anchor="middle" font-size="16" font-weight="700" fill="#14304d">결과 안내 (respond)</text>
+      <rect x="150" y="706" width="120" height="40" rx="20" fill="#eef4fb" stroke="#1a6fb5" stroke-width="1.5"/>
+      <text x="210" y="731" text-anchor="middle" font-size="15" font-weight="700" fill="#14304d">END</text>
+      <!-- 우측 분기 -->
+      <rect x="430" y="172" width="160" height="48" rx="10" fill="#eaf2fb" stroke="#cfe0f2" stroke-width="1.5"/>
+      <text x="510" y="201" text-anchor="middle" font-size="15" font-weight="700" fill="#155a94">되묻기 (ask)</text>
+      <rect x="620" y="176" width="90" height="40" rx="20" fill="#eef4fb" stroke="#1a6fb5" stroke-width="1.5"/>
+      <text x="665" y="201" text-anchor="middle" font-size="14" font-weight="700" fill="#14304d">END</text>
+      <rect x="430" y="358" width="160" height="48" rx="10" fill="#e0564e"/>
+      <text x="510" y="387" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">119 · 응급실</text>
+      <rect x="620" y="362" width="90" height="40" rx="20" fill="#fdecea" stroke="#e0564e" stroke-width="1.5"/>
+      <text x="665" y="387" text-anchor="middle" font-size="14" font-weight="700" fill="#c0433b">END</text>
+      <!-- 엣지 -->
+      <line x1="210" y1="54" x2="210" y2="78" stroke="#1a6fb5" stroke-width="2" marker-end="url(#bh)"/>
+      <line x1="210" y1="136" x2="210" y2="154" stroke="#1a6fb5" stroke-width="2" marker-end="url(#bh)"/>
+      <line x1="285" y1="196" x2="428" y2="196" stroke="#1a6fb5" stroke-width="2" marker-end="url(#bh)"/>
+      <text x="320" y="186" font-size="13" font-weight="700" fill="#5d7088">아니오</text>
+      <line x1="590" y1="196" x2="618" y2="196" stroke="#1a6fb5" stroke-width="2" marker-end="url(#bh)"/>
+      <line x1="210" y1="236" x2="210" y2="264" stroke="#1a6fb5" stroke-width="2" marker-end="url(#bh)"/>
+      <text x="222" y="256" font-size="13" font-weight="700" fill="#5d7088">예</text>
+      <line x1="210" y1="322" x2="210" y2="340" stroke="#1a6fb5" stroke-width="2" marker-end="url(#bh)"/>
+      <line x1="285" y1="382" x2="428" y2="382" stroke="#e0564e" stroke-width="2" marker-end="url(#rh)"/>
+      <text x="330" y="372" font-size="13" font-weight="700" fill="#c0433b">예</text>
+      <line x1="590" y1="382" x2="618" y2="382" stroke="#e0564e" stroke-width="2" marker-end="url(#rh)"/>
+      <line x1="210" y1="422" x2="210" y2="450" stroke="#1a6fb5" stroke-width="2" marker-end="url(#bh)"/>
+      <text x="222" y="442" font-size="13" font-weight="700" fill="#5d7088">아니오</text>
+      <line x1="210" y1="508" x2="210" y2="536" stroke="#1a6fb5" stroke-width="2" marker-end="url(#bh)"/>
+      <line x1="210" y1="594" x2="210" y2="622" stroke="#1a6fb5" stroke-width="2" marker-end="url(#bh)"/>
+      <line x1="210" y1="680" x2="210" y2="704" stroke="#1a6fb5" stroke-width="2" marker-end="url(#bh)"/>
+    </svg>
+  </div>
+  <div class="callout"><b>되물음 "루프"는 그래프 안의 순환이 아니에요.</b> 정보가 부족하면 <code>ask</code>로 가서 <b>질문을 담아 턴을 끝냅니다(END)</b>. 사용자가 답하면 다음 <code>/api/chat</code> 호출이 <code>history</code>와 함께 다시 <code>collect</code>부터 시작 → 이게 되물음입니다. (그래프 내부 cycle보다 단순·안전)</div>
+
+  <h2>STEP 2 · 노드 함수 규약</h2>
+  <p>각 담당자에게 이 규약만 전달하면 됩니다. <b>State를 받아 바뀐 필드를 dict로 return</b>.</p>
+  <table>
+    <tr><th>노드</th><th>함수</th><th>읽기</th><th>쓰기(return)</th><th>담당</th></tr>
+    <tr><td>collect</td><td><code>collect_symptoms(state)</code></td><td>user_input, history</td><td>symptoms, need_more_info</td><td>박근령</td></tr>
+    <tr><td>triage</td><td><code>check_emergency(state)</code></td><td>user_input</td><td>emergency</td><td>고원영</td></tr>
+    <tr><td>classify</td><td><code>classify_department(state)</code></td><td>symptoms</td><td>departments</td><td>고원영</td></tr>
+    <tr><td>search</td><td><code>search_hospitals(state)</code></td><td>departments, location</td><td>hospitals</td><td>최건</td></tr>
+  </table>
+
+  <h2>STEP 3 · graph.py 구현</h2>
+  <p>패키지 먼저: <code>pip install langgraph langchain</code>. <span class="badge">확인완료: LangGraph API</span></p>
+<pre><code>from langgraph.graph import StateGraph, START, END
+
+from backend.agent.state import AgentState
+from backend.agent.nodes import collect, triage, classify, search
+
+
+# --- 분기(라우터) 함수: 문자열을 반환하면 그 이름의 노드로 간다 ---
+def route_after_collect(state: AgentState) -> str:
+    return "ask" if state.get("need_more_info") else "triage"
+
+def route_after_triage(state: AgentState) -> str:
+    return "emergency" if state.get("emergency") else "classify"
+
+
+# --- 메시지를 작성하는 터미널 노드들 ---
+def ask_node(state: AgentState) -> dict:
+    return {"final_message": "증상을 조금 더 자세히 알려주시겠어요? (언제부터 · 어디가 · 어떻게)"}
+
+def emergency_node(state: AgentState) -> dict:
+    return {"final_message": "응급 증상이 의심됩니다. 즉시 119에 연락하거나 가까운 응급실을 방문하세요."}
+
+def respond_node(state: AgentState) -> dict:
+    depts = state.get("departments", [])
+    if depts:
+        msg = f"말씀하신 증상으로는 '{depts[0]['name']}' 진료가 가장 적합해 보여요. 아래 추천 진료과와 주변 병원을 확인해보세요."
+    else:
+        msg = "추천 진료과를 찾지 못했어요. 증상을 조금 더 알려주시겠어요?"
+    return {"final_message": msg}
+
+
+def build_graph():
+    b = StateGraph(AgentState)
+    # 노드 등록
+    b.add_node("collect", collect.collect_symptoms)
+    b.add_node("ask", ask_node)
+    b.add_node("triage", triage.check_emergency)
+    b.add_node("emergency", emergency_node)
+    b.add_node("classify", classify.classify_department)
+    b.add_node("search", search.search_hospitals)
+    b.add_node("respond", respond_node)
+    # 엣지(흐름) 연결
+    b.add_edge(START, "collect")
+    b.add_conditional_edges("collect", route_after_collect,
+                            {"ask": "ask", "triage": "triage"})
+    b.add_edge("ask", END)
+    b.add_conditional_edges("triage", route_after_triage,
+                            {"emergency": "emergency", "classify": "classify"})
+    b.add_edge("emergency", END)
+    b.add_edge("classify", "search")
+    b.add_edge("search", "respond")
+    b.add_edge("respond", END)
+    return b.compile()
+
+
+# 앱 시작 시 1회만 컴파일해 재사용
+_graph = None
+def get_graph():
+    global _graph
+    if _graph is None:
+        _graph = build_graph()
+    return _graph</code></pre>
+  <div class="callout warn"><b>노드가 full State를 return해도 OK</b>지만(현재 스텁이 그럼), 권장은 <b>바뀐 필드만</b> return. 예: triage는 <code>return {"emergency": True}</code>. 팀에 이 규약으로 통일해 공지하세요.</div>
+
+  <h2>STEP 4 · run_agent (요청 ↔ State ↔ 응답 변환)</h2>
+  <p>FastAPI가 호출하는 진입점. <code>ChatRequest</code>를 State로 바꿔 그래프를 돌리고, 결과 State를 <code>ChatResponse</code>로 변환합니다.</p>
+<pre><code>from backend.api.schemas import ChatRequest, ChatResponse, DepartmentOut, HospitalOut
+
+def run_agent(req: ChatRequest) -> ChatResponse:
+    state = {
+        "user_input": req.message,
+        "history": req.history,
+        "location": {"lat": req.lat, "lng": req.lng},
+    }
+    final = get_graph().invoke(state)          # ← 그래프 실행
+
+    return ChatResponse(
+        reply=final.get("final_message", ""),
+        emergency=final.get("emergency", False),
+        need_more_info=final.get("need_more_info", False),
+        departments=[DepartmentOut(**d) for d in final.get("departments", [])],
+        hospitals=[HospitalOut(**h) for h in final.get("hospitals", [])],
+    )</code></pre>
+
+  <h2>STEP 5 · 스텁으로 전체 관통 테스트</h2>
+  <p>다른 노드가 비어 있어도(스텁) 그래프는 끝까지 돌아야 합니다. 이게 되면 각자 노드만 채우면 완성.</p>
+<pre><code># 그래프 단독 테스트
+python -c "from backend.agent.graph import run_agent; from backend.api.schemas import ChatRequest; print(run_agent(ChatRequest(message='무릎이 아파요', lat=37.5665, lng=126.9780)))"
+
+# 서버로 테스트
+uvicorn backend.main:app --reload
+# → http://localhost:8000/api/health 로 서버 확인</code></pre>
+  <div class="callout ok"><b>통합 담당자의 핵심 역할</b> — "스텁으로 전체가 돌아가는 상태"를 1~2일 안에 만들어 팀에 공유하세요. 그 뒤엔 각자 자기 노드를 채우며 바로바로 <code>/api/chat</code>으로 확인할 수 있습니다.</div>
+
+  <h2>(선택) 턴 간 메모리 강화</h2>
+  <p>지금은 프론트가 보내주는 <code>history</code>로 맥락을 유지합니다. 더 견고하게 하려면 LangGraph <b>checkpointer</b>(<code>MemorySaver</code>) + <code>thread_id</code>로 서버가 대화를 기억하게 할 수 있어요. <b>처음엔 history 방식으로 충분</b>하니 여유 생기면 업그레이드하세요.</p>
+
+  <h2>통합 담당자 주의사항</h2>
+  <ul>
+    <li><b>공유 계약 파일</b>(<code>state.py</code>, <code>main.py</code>)은 당신 소유 — 변경 시 팀 공지</li>
+    <li><code>schemas.py</code>는 최건과 협의해 확정 (State ↔ 응답 매핑이 맞아야 함)</li>
+    <li>노드 import는 <code>from backend.agent.nodes import ...</code> 형태 유지 (순환 import 주의)</li>
+    <li>PR 리뷰어 역할: 각자 노드가 <b>State 규약</b>을 지키는지 확인하고 병합</li>
+  </ul>
+
+  <h2>최종 체크리스트</h2>
+  <ul>
+    <li>□ <code>state.py</code> 확정 &amp; 팀 공지</li>
+    <li>□ <code>pip install langgraph langchain</code></li>
+    <li>□ <code>graph.py</code> 빌드 — 스텁으로 전체 관통</li>
+    <li>□ <code>run_agent()</code>가 <code>ChatResponse</code> 반환</li>
+    <li>□ 응급/되물음 분기 동작 확인</li>
+    <li>□ 팀에 "노드 함수 규약" 공유</li>
+  </ul>
+
+  <h2>참고 링크</h2>
+  <ul>
+    <li><a href="https://langchain-ai.github.io/langgraph/" target="_blank">LangGraph 공식 문서</a> — StateGraph, conditional edges, checkpointer</li>
+  </ul>
+
+  <div class="pager"><a href="setup.html">← 세팅 방법</a><a href="role-b.html">박태준 역할 →</a></div>
+</main>
+<div class="footer">닥터라우터(Dr.Router) 개발 가이드 · 박근령 (상세)</div>
+</body>
+</html>

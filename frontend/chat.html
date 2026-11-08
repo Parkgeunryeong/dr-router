@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 문진 · 닥터라우터</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Poppins:wght@600;700&display=swap">
+<style>
+  :root{
+    --blue:#1a6fb5; --blue-d:#155a94; --ink:#14304d; --muted:#5d7088;
+    --bg:#ffffff; --panel:#f6f9fc; --line:#e7edf4; --soft:#eaf2fb; --red:#e0564e; --green:#2e9e6b;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0;font-family:'Noto Sans KR',sans-serif;color:var(--ink);background:var(--panel);line-height:1.5;display:flex;flex-direction:column;}
+  a{color:inherit;text-decoration:none;}
+
+  header.nav{background:#fff;border-bottom:1px solid var(--line);}
+  .nav-in{max-width:1120px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:70px;}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:900;font-size:21px;}
+  .logo .mark{width:34px;height:34px;border-radius:9px;background:var(--blue);display:flex;align-items:center;justify-content:center;}
+  .logo .en{font-family:'Poppins',sans-serif;color:var(--blue);}
+  .menu{display:flex;gap:30px;font-weight:500;color:var(--muted);}
+  .menu a.active,.menu a:hover{color:var(--blue);}
+
+  .chat-wrap{flex:1;max-width:760px;width:100%;margin:0 auto;padding:24px;display:flex;flex-direction:column;gap:16px;overflow:auto;}
+
+  .emg{background:#fdecea;border:1px solid #f6d2ce;color:#b23b33;border-radius:14px;padding:14px 18px;font-size:14px;display:flex;gap:10px;align-items:center;}
+  .emg b{color:#a5342c;}
+
+  .msg{display:flex;gap:12px;max-width:85%;}
+  .msg .av{width:40px;height:40px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-weight:700;}
+  .msg.ai .av{background:var(--blue);}
+  .msg.me{align-self:flex-end;flex-direction:row-reverse;}
+  .bubble{padding:14px 18px;border-radius:16px;font-size:16px;}
+  .msg.ai .bubble{background:#fff;border:1px solid var(--line);border-top-left-radius:4px;}
+  .msg.me .bubble{background:var(--blue);color:#fff;border-top-right-radius:4px;}
+  .msg.me .av{background:var(--ink);color:#fff;}
+
+  /* recommendation card */
+  .rec{background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;max-width:85%;}
+  .rec .head{background:var(--soft);padding:16px 20px;font-weight:700;color:var(--blue-d);display:flex;align-items:center;gap:10px;}
+  .rec .body{padding:20px;}
+  .dept{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px dashed var(--line);}
+  .dept:last-of-type{border-bottom:none;}
+  .dept .name{font-weight:700;font-size:17px;}
+  .dept .why{color:var(--muted);font-size:14px;margin-top:2px;}
+  .score{font-family:'Poppins',sans-serif;font-weight:700;color:var(--blue);background:var(--soft);padding:6px 12px;border-radius:999px;font-size:14px;flex:none;margin-left:14px;}
+  .score.top{background:var(--blue);color:#fff;}
+  .rec .foot{padding:16px 20px;border-top:1px solid var(--line);display:flex;gap:10px;flex-wrap:wrap;}
+  .btn{display:inline-flex;align-items:center;gap:8px;background:var(--blue);color:#fff;font-weight:700;padding:11px 20px;border-radius:999px;border:none;cursor:pointer;font-size:14px;}
+  .btn:hover{background:var(--blue-d);}
+  .btn.ghost{background:var(--soft);color:var(--blue-d);}
+  .disclaimer{font-size:13px;color:#9aa7b7;max-width:85%;}
+
+  /* input bar */
+  .inputbar{background:#fff;border-top:1px solid var(--line);padding:14px 0;}
+  .inputbar-in{max-width:760px;margin:0 auto;padding:0 24px;display:flex;gap:10px;align-items:center;}
+  .field{flex:1;display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:12px 18px;color:#9aa7b7;}
+  .mic{width:46px;height:46px;border-radius:50%;background:var(--soft);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;}
+  .send{width:46px;height:46px;border-radius:50%;background:var(--blue);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;}
+
+  @media(max-width:640px){ .menu{display:none;} .msg,.rec,.disclaimer{max-width:100%;} }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-in">
+    <a class="logo" href="index.html">
+      <span class="mark"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" fill="#fff"/></svg></span>
+      닥터라우터 <span class="en">Dr.Router</span>
+    </a>
+    <nav class="menu">
+      <a href="index.html">홈</a>
+      <a href="chat.html" class="active">AI 문진</a>
+      <a href="hospitals.html">주변 병원</a>
+    </nav>
+  </div>
+</header>
+
+<div class="chat-wrap">
+  <div class="emg">🚨 <span><b>응급 증상</b>(의식저하·호흡곤란·심한 흉통 등)이 있다면 문진을 멈추고 즉시 <b>119</b>에 연락하세요.</span></div>
+
+  <div class="msg ai">
+    <div class="av"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" fill="#fff"/></svg></div>
+    <div class="bubble">안녕하세요, 닥터라우터예요. 어디가 어떻게 불편하신지 편하게 말씀해 주세요. 😊</div>
+  </div>
+
+  <div class="msg me"><div class="av">나</div><div class="bubble">어제 저녁부터 오른쪽 아랫배가 콕콕 쑤시고 미열이 나요.</div></div>
+
+  <div class="msg ai">
+    <div class="av"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" fill="#fff"/></svg></div>
+    <div class="bubble">통증이 점점 심해지나요, 비슷한가요? 그리고 메스꺼움이나 구토 증상도 있으신가요?</div>
+  </div>
+
+  <div class="msg me"><div class="av">나</div><div class="bubble">점점 심해지는 느낌이고, 아까 한 번 토했어요.</div></div>
+
+  <div class="msg ai">
+    <div class="av"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" fill="#fff"/></svg></div>
+    <div class="bubble">말씀해주신 증상을 바탕으로 적합한 진료과를 안내해 드릴게요.</div>
+  </div>
+
+  <div class="rec">
+    <div class="head">🩺 추천 진료과</div>
+    <div class="body">
+      <div class="dept">
+        <div><div class="name">외과 (일반외과)</div><div class="why">우하복부 통증 + 발열 + 구토 → 충수염 등 복부 외과 질환 가능성</div></div>
+        <span class="score top">87%</span>
+      </div>
+      <div class="dept">
+        <div><div class="name">내과 (소화기내과)</div><div class="why">위장관 염증·장염 가능성도 함께 고려</div></div>
+        <span class="score">63%</span>
+      </div>
+      <div class="dept">
+        <div><div class="name">응급의학과</div><div class="why">통증이 급격히 심해지면 응급실 방문 권장</div></div>
+        <span class="score">41%</span>
+      </div>
+    </div>
+    <div class="foot">
+      <a class="btn" href="hospitals.html">📍 주변 병원 보기</a>
+      <button class="btn ghost">질환 정보 더보기</button>
+    </div>
+  </div>
+
+  <div class="disclaimer">※ 본 안내는 의학적 진단이 아니며 참고용입니다. 증상이 급격히 악화되면 즉시 응급실을 이용하세요.</div>
+</div>
+
+<div class="inputbar">
+  <div class="inputbar-in">
+    <button class="mic" title="음성으로 말하기">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1a6fb5" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="21"/></svg>
+    </button>
+    <div class="field">증상을 입력하세요…</div>
+    <button class="send" title="전송">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M3 20l18-8L3 4l4 8-4 8z"/></svg>
+    </button>
+  </div>
+</div>
+
+</body>
+</html>

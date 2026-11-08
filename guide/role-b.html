@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>박태준 역할 (상세) · 닥터라우터 가이드</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Poppins:wght@600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/guide.css">
+</head>
+<body>
+<header class="nav"><div class="nav-in">
+  <span class="brand"><span class="mark"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" fill="#fff"/></svg></span>닥터라우터 <span class="en">Guide</span></span>
+  <a class="item" href="index.html">홈</a>
+  <a class="item" href="flow.html">프로젝트 흐름</a>
+  <a class="item" href="setup.html">세팅 방법</a>
+  <a class="item" href="role-a.html">박근령</a>
+  <a class="item active" href="role-b.html">박태준</a>
+  <a class="item" href="role-c.html">최건</a>
+  <a class="item" href="role-d.html">이상현</a>
+  <a class="item" href="role-e.html">고원영</a>
+</div></header>
+
+<main class="wrap">
+  <p class="eyebrow">Role · 박태준 (상세 가이드)</p>
+  <h1>RAG · 프론트엔드</h1>
+  <p class="lead">두 가지를 맡습니다 — ① 진료과 문서를 Chroma에 올려 <b>검색(RAG)</b> 제공, ② 목업 화면을 백엔드에 <b>연결</b>. 둘 다 "작게" 가는 게 핵심이에요.</p>
+
+  <div class="callout"><b>RAG의 역할</b> — 분류 담당(고원영)의 <code>classify.py</code>가 <code>retrieve(query)</code>를 호출하면,
+  증상과 관련된 진료과 문서를 돌려줘서 LLM이 <b>근거 있게</b> 분류하도록 돕는 것. 당신은 <code>retrieve()</code>가 잘 동작하게만 만들면 됩니다.</div>
+
+  <h1 style="font-size:26px;margin-top:40px;border-top:2px solid var(--soft);padding-top:28px">PART 1 · RAG (Chroma)</h1>
+
+  <h2>STEP 1 · 진료과 문서 작성</h2>
+  <p><code>data/departments/</code> 폴더에 <b>진료과 하나당 파일 하나</b>(<code>내과.md</code>, <code>정형외과.md</code> …)로 10~20개. 각 문서는 3~5문장이면 충분해요. (예시 파일 <code>data/departments/내과.md</code> 이미 있음)</p>
+<pre><code># 정형외과
+
+## 대표 증상
+- 무릎/어깨/허리 통증, 관절이 붓고 시큰거림
+- 삐끗함, 골절 의심, 디스크
+
+## 담당 질환
+- 관절염, 인대 손상, 척추 질환, 골절
+
+## 안내 포인트
+- 외상 직후 심한 부기·변형이면 응급/외과 고려.</code></pre>
+  <div class="callout"><b>왜 작게?</b> — "증상 → 진료과" 분류는 질환백과 전체가 아니라 <b>진료과별 요약 문서</b>면 충분해요. 적을수록 적재·검색이 빠르고 품질 확인도 쉽습니다.</div>
+
+  <h2>STEP 2 · 패키지 설치</h2>
+<pre><code># requirements.txt 의 주석 해제 후
+pip install chromadb sentence-transformers</code></pre>
+  <div class="callout warn">임베딩 모델은 <b>처음 1회 자동 다운로드</b>됩니다(수백 MB, 인터넷 필요). 이후엔 캐시에서 로드. GPU 없어도 문서 10~20개는 CPU로 금방 됩니다.</div>
+
+  <h2>STEP 3 · retriever.py (컬렉션 + 검색)</h2>
+  <p>컬렉션 생성 로직을 여기 한 곳에 두고 <code>build_index.py</code>가 가져다 씁니다. <span class="badge">확인완료: Chroma API</span></p>
+<pre><code>import chromadb
+from chromadb.utils import embedding_functions
+
+CHROMA_DIR = "backend/rag/chroma_db"
+COLLECTION = "departments"
+# 한국어 경량 임베딩 (기본값). 품질 더 원하면 "BAAI/bge-m3" (더 무거움)
+MODEL = "jhgan/ko-sroberta-multitask"
+
+_col = None
+
+def get_collection():
+    """Chroma 컬렉션을 1회 생성해 재사용."""
+    global _col
+    if _col is None:
+        client = chromadb.PersistentClient(path=CHROMA_DIR)
+        emb = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=MODEL)
+        _col = client.get_or_create_collection(
+            name=COLLECTION,
+            embedding_function=emb,
+            metadata={"hnsw:space": "cosine"},   # 코사인 유사도
+        )
+    return _col
+
+
+def retrieve(query: str, k: int = 3):
+    """증상 쿼리로 관련 진료과 문서 Top-k 반환."""
+    col = get_collection()
+    res = col.query(query_texts=[query], n_results=k)
+    docs  = res["documents"][0]
+    metas = res["metadatas"][0]
+    dists = res["distances"][0]
+    return [
+        {"dept": m.get("dept"), "text": d, "score": round(1 - dist, 3)}
+        for d, m, dist in zip(docs, metas, dists)
+    ]</code></pre>
+
+  <h2>STEP 4 · build_index.py (문서 적재)</h2>
+  <p>문서를 읽어 컬렉션에 <code>upsert</code>(있으면 갱신, 없으면 추가). <b>최초 1회 + 문서 바뀔 때마다</b> 실행.</p>
+<pre><code>from pathlib import Path
+from backend.rag.retriever import get_collection
+
+DATA_DIR = Path("data/departments")
+
+def main():
+    col = get_collection()
+    ids, documents, metadatas = [], [], []
+    for p in sorted(DATA_DIR.glob("*.md")):
+        ids.append(p.stem)                       # 파일명 = 진료과명 = id
+        documents.append(p.read_text(encoding="utf-8"))
+        metadatas.append({"dept": p.stem})
+    if not ids:
+        print("문서가 없습니다: data/departments/*.md 를 먼저 작성하세요.")
+        return
+    col.upsert(ids=ids, documents=documents, metadatas=metadatas)
+    print(f"적재 완료: {len(ids)}개 진료과 문서")
+
+if __name__ == "__main__":
+    main()</code></pre>
+
+  <h2>STEP 5 · 실행 &amp; 검색 테스트</h2>
+<pre><code># 1) 적재 (최초 1회)
+python -m backend.rag.build_index
+
+# 2) 검색 테스트 (파이썬 셸)
+python -c "from backend.rag.retriever import retrieve; print(retrieve('무릎이 붓고 시큰거려요'))"</code></pre>
+  <p>결과로 <code>정형외과</code> 문서가 상위에 나오면 성공. <code>score</code>가 높을수록(1에 가까울수록) 유사.</p>
+  <div class="callout ok"><b>여기까지 되면 RAG 끝.</b> 분류(고원영)가 <code>retrieve()</code>를 가져다 쓰면 됩니다. 정확도 튜닝은 문서 문구를 다듬는 정도로 충분 — 과하게 안 해도 돼요.</div>
+
+  <h1 style="font-size:26px;margin-top:48px;border-top:2px solid var(--soft);padding-top:28px">PART 2 · 프론트엔드 연결</h1>
+
+  <h2>STEP 1 · 목업 구조 파악</h2>
+  <p><code>frontend/</code>에 목업 3페이지가 있고, FastAPI가 <code>/</code>에서 서빙합니다. (서버 띄우면 <code>localhost:8000</code>에서 바로 보임) 같은 출처라 <b>CORS 걱정 없음.</b></p>
+  <table>
+    <tr><th>파일</th><th>역할</th><th>연결 작업</th></tr>
+    <tr><td><code>index.html</code></td><td>메인</td><td>그대로 (버튼 링크만)</td></tr>
+    <tr><td><code>chat.html</code></td><td>AI 문진</td><td>★ 백엔드 연결 (핵심)</td></tr>
+    <tr><td><code>hospitals.html</code></td><td>주변 병원</td><td>응답의 hospitals 렌더링</td></tr>
+    <tr><td><code>assets/app.js</code></td><td><code>sendChat()</code> 헬퍼</td><td>이미 작성됨 — 가져다 쓰기</td></tr>
+  </table>
+
+  <h2>STEP 2 · chat.html 연결</h2>
+  <p>현재 목업의 입력창은 장식용 <code>&lt;div class="field"&gt;</code>예요. 먼저 <b>진짜 <code>&lt;input&gt;</code></b>로 바꾸고, <code>&lt;/body&gt;</code> 앞에 아래 스크립트를 넣으세요.</p>
+<pre><code>&lt;script src="assets/app.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  const input  = document.querySelector('#msg');     // &lt;input id="msg"&gt;
+  const sendBtn = document.querySelector('#send');    // 전송 버튼
+  const thread  = document.querySelector('.chat-wrap');
+
+  async function onSend() {
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    appendMessage('me', text);
+
+    const pos = await getLocation();                 // 위치 (거부 시 {})
+    try {
+      const out = await DrRouter.sendChat(text, pos); // POST /api/chat
+      if (out.emergency) { appendEmergency(out.reply); return; }
+      appendMessage('ai', out.reply);
+      if (out.departments.length) appendDepartments(out.departments);
+    } catch (e) {
+      appendMessage('ai', '서버 연결에 문제가 있어요. 잠시 후 다시 시도해주세요.');
+    }
+  }
+
+  sendBtn.addEventListener('click', onSend);
+  input.addEventListener('keydown', e =&gt; { if (e.key === 'Enter') onSend(); });
+
+  function getLocation() {
+    return new Promise(res =&gt; {
+      if (!navigator.geolocation) return res({});
+      navigator.geolocation.getCurrentPosition(
+        p =&gt; res({ lat: p.coords.latitude, lng: p.coords.longitude }),
+        () =&gt; res({})                                 // 거부해도 진행
+      );
+    });
+  }
+&lt;/script&gt;</code></pre>
+
+  <h2>STEP 3 · 화면 그리는 함수 (DOM)</h2>
+  <p>목업의 말풍선·추천카드 마크업을 그대로 함수로 만들면 됩니다. 뼈대 예시:</p>
+<pre><code>function appendMessage(who, text) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + who;        // 목업의 .msg.me / .msg.ai 재사용
+  div.textContent = text;
+  thread.appendChild(div);
+  thread.scrollTop = thread.scrollHeight;
+}
+
+function appendDepartments(depts) {
+  const box = document.createElement('div');
+  box.className = 'rec';
+  box.innerHTML = '&lt;div class="head"&gt;🩺 추천 진료과&lt;/div&gt;';
+  depts.forEach((d, i) =&gt; {
+    const row = document.createElement('div');
+    row.className = 'dept';
+    row.innerHTML =
+      `&lt;div&gt;&lt;div class="name"&gt;${d.name}&lt;/div&gt;`
+      + `&lt;div class="why"&gt;${d.reason}&lt;/div&gt;&lt;/div&gt;`
+      + `&lt;span class="score ${i===0?'top':''}"&gt;${Math.round(d.score*100)}%&lt;/span&gt;`;
+    box.appendChild(row);
+  });
+  thread.appendChild(box);
+}
+
+function appendEmergency(text) {
+  const div = document.createElement('div');
+  div.className = 'emg';
+  div.innerHTML = '🚨 ' + text;
+  thread.appendChild(div);
+}</code></pre>
+
+  <h2>STEP 4 · 테스트</h2>
+<pre><code>uvicorn backend.main:app --reload
+# 브라우저: http://localhost:8000/chat.html
+# 증상 입력 → 응답 말풍선 + 추천 진료과가 뜨면 성공</code></pre>
+  <div class="callout warn"><b>위치 권한</b> — <code>geolocation</code>은 <b>localhost 또는 https</b>에서만 동작해요. 발표 때 ngrok(https) 쓰면 됩니다. 권한 거부 시엔 위치 없이 진행되도록 위 코드가 처리합니다.</div>
+
+  <h2>최종 체크리스트</h2>
+  <ul>
+    <li>□ <code>data/departments/</code>에 진료과 문서 10~20개</li>
+    <li>□ <code>python -m backend.rag.build_index</code> → "적재 완료"</li>
+    <li>□ <code>retrieve("...")</code>가 관련 진료과 문서 반환</li>
+    <li>□ <code>chat.html</code> 입력 → <code>/api/chat</code> 호출 → 말풍선·추천 표시</li>
+    <li>□ 위치 거부해도 에러 없이 진행</li>
+  </ul>
+
+  <h2>참고 링크</h2>
+  <ul>
+    <li><a href="https://docs.trychroma.com/docs/collections" target="_blank">Chroma 공식 문서 — Collections</a></li>
+    <li><a href="https://huggingface.co/jhgan/ko-sroberta-multitask" target="_blank">ko-sroberta-multitask (기본 임베딩)</a> · <a href="https://huggingface.co/BAAI/bge-m3" target="_blank">BGE-M3 (고품질 대안)</a></li>
+  </ul>
+
+  <div class="pager"><a href="role-a.html">← 박근령</a><a href="role-c.html">최건 역할 →</a></div>
+</main>
+<div class="footer">닥터라우터(Dr.Router) 개발 가이드 · 박태준 (상세)</div>
+</body>
+</html>

@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>고원영 역할 (상세) · 닥터라우터 가이드</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Poppins:wght@600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/guide.css">
+</head>
+<body>
+<header class="nav"><div class="nav-in">
+  <span class="brand"><span class="mark"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" fill="#fff"/></svg></span>닥터라우터 <span class="en">Guide</span></span>
+  <a class="item" href="index.html">홈</a>
+  <a class="item" href="flow.html">프로젝트 흐름</a>
+  <a class="item" href="setup.html">세팅 방법</a>
+  <a class="item" href="role-a.html">박근령</a>
+  <a class="item" href="role-b.html">박태준</a>
+  <a class="item" href="role-c.html">최건</a>
+  <a class="item" href="role-d.html">이상현</a>
+  <a class="item active" href="role-e.html">고원영</a>
+</div></header>
+
+<main class="wrap">
+  <p class="eyebrow">Role · 고원영 (상세 가이드)</p>
+  <h1>진료과 분류 · 응급 규칙 · 평가</h1>
+  <p class="lead">AI의 "두뇌"에 해당하는 분류 품질과, 안전의 핵심인 응급 판별, 그리고 성능을 숫자로 증명하는 평가를 담당합니다.</p>
+
+  <div class="callout"><b>3가지 담당 파일</b> — <code>core/emergency_rules.py</code>(응급), <code>agent/nodes/triage.py</code>·<code>classify.py</code>(판별·분류), <code>eval/</code>(평가). 안전 관련이라 <b>응급 판별을 가장 보수적으로</b> 만드는 게 1순위예요.</div>
+
+  <h1 style="font-size:26px;margin-top:40px;border-top:2px solid var(--soft);padding-top:28px">PART 1 · 응급 규칙 (가장 중요)</h1>
+  <p>원칙: <b>"놓치지 않는 것(미탐 최소화)"이 최우선.</b> 애매하면 응급으로 분류하는 게 안전해요. 키워드 규칙을 1차로 쓰고, 여유되면 LLM 판단을 보조로.</p>
+
+  <h2>STEP 1 · emergency_rules.py 보강</h2>
+<pre><code>EMERGENCY_KEYWORDS = [
+    # 의식/신경
+    "의식", "의식저하", "의식 저하", "쓰러", "실신", "경련", "발작",
+    "마비", "한쪽", "말이 어눌", "발음이", "얼굴이 돌아",
+    # 호흡/순환
+    "숨", "호흡곤란", "숨을 못", "숨이 안", "숨이 차",
+    "가슴", "흉통", "가슴이 찢", "가슴을 쥐어", "식은땀",
+    # 출혈/외상
+    "피를 많이", "대량 출혈", "토혈", "각혈", "멈추지 않는 피",
+    # 기타 위급
+    "극심한", "참을 수 없는", "갑자기", "목을 조",
+]
+
+def is_emergency(text: str) -> bool:
+    """키워드 하나라도 걸리면 응급으로 간주(보수적)."""
+    if not text:
+        return False
+    return any(kw in text for kw in EMERGENCY_KEYWORDS)</code></pre>
+  <div class="callout warn"><b>보수적으로</b> — "오탐(응급 아닌데 119 안내)"보다 "미탐(응급인데 놓침)"이 훨씬 위험해요. 키워드는 넉넉하게 넣으세요. 발표 때 "안전을 위해 보수적으로 설계했다"고 설명하면 가점.</div>
+
+  <h2>STEP 2 · 테스트</h2>
+<pre><code>python -c "from backend.core.emergency_rules import is_emergency; print(is_emergency('갑자기 가슴이 쥐어짜듯 아파요'), is_emergency('무릎이 시큰해요'))"
+# 기대: True False</code></pre>
+  <p>(선택) LLM 보조 판단을 넣고 싶으면 triage에서 키워드로 1차 거른 뒤, 애매한 경우만 LLM에 "응급 여부"를 물어보는 2단계 구조로. 처음엔 키워드만으로 충분.</p>
+
+  <h1 style="font-size:26px;margin-top:48px;border-top:2px solid var(--soft);padding-top:28px">PART 2 · 진료과 분류</h1>
+  <p>RAG 근거(박태준의 <code>retrieve()</code>) + LLM으로 <b>Top-3 진료과 + 근거</b>를 생성합니다.</p>
+
+  <h2>STEP 1 · LLM 설정 (GPT / OpenAI)</h2>
+  <p>우리 팀은 <b>GPT(OpenAI)</b>로 갑니다. (수업에서 제공하는 GPT 키 사용) LangChain으로 연결해요.</p>
+<pre><code>pip install langchain-openai        # .env 의 LLM_API_KEY = 수업에서 받은 OpenAI 키</code></pre>
+  <div class="callout"><b>모델 선택</b> — 분류는 가벼운 작업이라 <b>저렴·빠른 모델</b>로 충분해요. 예: <code>gpt-4o-mini</code>. (수업에서 안내한 모델명이 있으면 그걸로 교체)</div>
+
+  <h2>STEP 2 · classify.py 구현</h2>
+  <p>LangChain의 <b>구조화 출력</b>(<code>with_structured_output</code>)으로 JSON을 안정적으로 받습니다.</p>
+<pre><code>from typing import List
+from pydantic import BaseModel, Field
+
+from langchain_openai import ChatOpenAI
+
+from backend.config import LLM_API_KEY
+from backend.rag.retriever import retrieve
+
+
+# LLM이 채워줄 출력 형식
+class DeptPick(BaseModel):
+    name: str = Field(description="진료과명 (예: 외과)")
+    score: float = Field(ge=0, le=1, description="적합도 0~1")
+    reason: str = Field(description="이 진료과인 한 줄 근거")
+
+class Classification(BaseModel):
+    departments: List[DeptPick]
+
+
+_llm = ChatOpenAI(model="gpt-4o-mini", api_key=LLM_API_KEY)   # 수업 제공 키
+_structured = _llm.with_structured_output(Classification)
+
+PROMPT = """당신은 증상을 듣고 적합한 '진료과'를 안내하는 도우미입니다.
+아래 참고 문서를 근거로, 가장 적합한 진료과를 최대 3개까지 고르세요.
+각 진료과에 적합도(0~1)와 한 줄 근거를 붙이세요.
+질병을 단정하지 말고, 어느 '과'에 가면 되는지만 안내하세요.
+
+[환자 증상]
+{symptoms}
+
+[참고 문서 (진료과별 설명)]
+{context}
+"""
+
+
+def classify_department(state):
+    symptoms = state.get("symptoms", [])
+    query = " ".join(symptoms) or state.get("user_input", "")
+
+    docs = retrieve(query, k=3)                        # 박태준의 RAG
+    context = "\n\n".join(f"- {d['dept']}: {d['text'][:300]}" for d in docs)
+
+    result = _structured.invoke(PROMPT.format(symptoms=query, context=context))
+    # score 내림차순 정렬 후 State에 기록
+    depts = sorted((d.model_dump() for d in result.departments),
+                   key=lambda d: d["score"], reverse=True)
+    return {"departments": depts}</code></pre>
+  <div class="callout"><b>프롬프트 핵심</b> — ① "진단 아님, 진료과 안내"를 명시 ② 참고 문서(RAG)를 근거로 쓰게 지시 ③ 최대 3개. 이 3가지가 환각을 줄이고 Top-3 평가와도 맞물려요.</div>
+
+  <h2>STEP 3 · 테스트</h2>
+<pre><code>python -c "from backend.agent.nodes.classify import classify_department; print(classify_department({'symptoms':['무릎 통증','부기']}))"
+# 기대: departments 에 정형외과가 상위로</code></pre>
+  <div class="callout warn">LLM 첫 호출 시 <b>API 키·요금</b> 확인. 분류는 짧아서 저렴하지만, 평가로 수십 번 돌리면 쌓이니 <code>eval</code>은 모델 저렴한 걸로.</div>
+
+  <h1 style="font-size:26px;margin-top:48px;border-top:2px solid var(--soft);padding-top:28px">PART 3 · 평가 (Top-3 정확도)</h1>
+  <p><b>Top-3 정확도</b> = 추천 상위 3개 안에 정답 진료과가 포함된 비율. 분류 품질을 숫자로 증명합니다.</p>
+
+  <h2>STEP 1 · 테스트셋 작성</h2>
+  <p><code>eval/testset.csv</code>에 "증상 → 정답 진료과"를 20~30개. (샘플 이미 있음) 실제 흔한 증상 위주로.</p>
+<pre><code>symptom,answer_dept
+"어제부터 오른쪽 아랫배가 아프고 열이 나요",외과
+"가슴이 답답하고 계단 오를 때 숨이 차요",순환기내과
+"무릎이 붓고 계단 내려갈 때 시큰거려요",정형외과
+...</code></pre>
+
+  <h2>STEP 2 · 평가 실행</h2>
+  <p><code>eval/evaluate.py</code>가 각 증상을 분류에 넣고 Top-3 안에 정답이 있는지 셉니다. (이미 작성됨)</p>
+<pre><code>python -m eval.evaluate
+
+# 출력 예시:
+# [O] 오른쪽 아랫배가 아프고... → ['외과','내과','응급의학과'] (정답: 외과)
+# [X] ...
+# Top-3 정확도: 17/20 = 85.0%</code></pre>
+
+  <h2>STEP 3 · 개선 루프</h2>
+  <ul>
+    <li><b>틀린 케이스(X)</b>를 보고 → 해당 진료과 문서(<code>data/departments/</code>)의 증상 설명을 보강 (박태준과 협업)</li>
+    <li>프롬프트에 자주 헷갈리는 과 구분 기준을 한 줄 추가</li>
+    <li>다시 <code>evaluate</code> → 숫자 올라가는지 확인</li>
+  </ul>
+  <div class="callout ok"><b>과하게 올리지 말 것</b> — 85% 정도면 발표용으로 충분해요. 90%를 95%로 올리려 매달리는 게 제일 시간 낭비. 대표 케이스가 잘 되면 OK.</div>
+
+  <h2>최종 체크리스트</h2>
+  <ul>
+    <li>□ <code>emergency_rules.py</code> 키워드 보강 + 보수적 동작 확인</li>
+    <li>□ provider 1개 선택 → <code>classify.py</code> 구조화 출력으로 Top-3 반환</li>
+    <li>□ "진단 아님·근거 기반" 프롬프트 반영</li>
+    <li>□ <code>testset.csv</code> 20~30개 작성</li>
+    <li>□ <code>python -m eval.evaluate</code> → Top-3 정확도 측정</li>
+    <li>□ 틀린 케이스로 문서/프롬프트 1~2회 개선</li>
+  </ul>
+
+  <h2>참고 링크</h2>
+  <ul>
+    <li><a href="https://python.langchain.com/docs/concepts/structured_outputs/" target="_blank">LangChain 구조화 출력 (with_structured_output)</a></li>
+    <li><a href="https://python.langchain.com/docs/integrations/chat/" target="_blank">LangChain Chat 모델 (provider별 설정)</a></li>
+  </ul>
+  <div class="callout"><b>GPT 사용 확정</b> — 수업에서 제공하는 OpenAI 키를 <code>.env</code>의 <code>LLM_API_KEY</code>에 넣고 <code>langchain-openai</code>를 씁니다. 키는 <b>절대 git에 올리지 마세요</b> (<code>.env</code>는 gitignore됨).</div>
+
+  <div class="pager"><a href="role-d.html">← 이상현</a><a href="index.html">홈 →</a></div>
+</main>
+<div class="footer">닥터라우터(Dr.Router) 개발 가이드 · 고원영 (상세)</div>
+</body>
+</html>

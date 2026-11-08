@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>주변 병원 · 닥터라우터</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Poppins:wght@600;700&display=swap">
+<style>
+  :root{
+    --blue:#1a6fb5; --blue-d:#155a94; --ink:#14304d; --muted:#5d7088;
+    --bg:#ffffff; --panel:#f6f9fc; --line:#e7edf4; --soft:#eaf2fb; --red:#e0564e; --green:#2e9e6b;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{margin:0;font-family:'Noto Sans KR',sans-serif;color:var(--ink);background:var(--bg);line-height:1.5;display:flex;flex-direction:column;}
+  a{color:inherit;text-decoration:none;}
+
+  header.nav{background:#fff;border-bottom:1px solid var(--line);}
+  .nav-in{max-width:1200px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:70px;}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:900;font-size:21px;}
+  .logo .mark{width:34px;height:34px;border-radius:9px;background:var(--blue);display:flex;align-items:center;justify-content:center;}
+  .logo .en{font-family:'Poppins',sans-serif;color:var(--blue);}
+  .menu{display:flex;gap:30px;font-weight:500;color:var(--muted);}
+  .menu a.active,.menu a:hover{color:var(--blue);}
+
+  .layout{flex:1;max-width:1200px;width:100%;margin:0 auto;padding:22px 24px;display:grid;grid-template-columns:1fr 420px;gap:22px;min-height:0;}
+
+  /* MAP (목업) */
+  .map{position:relative;border-radius:20px;overflow:hidden;border:1px solid var(--line);background:#dfe9f1;min-height:560px;}
+  .map .roads line{stroke:#ffffff;stroke-linecap:round;}
+  .map .roads .minor{stroke:#eef3f8;}
+  .map .park{fill:#cfe6d4;}
+  .map .water{fill:#bcd8ee;}
+  .badge-map{position:absolute;top:14px;left:14px;background:rgba(255,255,255,.9);border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:13px;color:var(--muted);}
+  .me-dot{position:absolute;width:20px;height:20px;border-radius:50%;background:#2f7ad1;border:3px solid #fff;box-shadow:0 0 0 6px rgba(47,122,209,.25);}
+  .pin{position:absolute;transform:translate(-50%,-100%);cursor:pointer;}
+  .pin svg{filter:drop-shadow(0 4px 6px rgba(20,48,77,.25));}
+  .pin .lbl{position:absolute;top:-8px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#fff;border:1px solid var(--line);border-radius:8px;padding:3px 8px;font-size:12px;font-weight:700;}
+
+  /* LIST */
+  .panel{display:flex;flex-direction:column;min-height:0;}
+  .filters{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
+  .chip{border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:999px;padding:8px 16px;font-size:14px;font-weight:500;cursor:pointer;}
+  .chip.on{background:var(--blue);color:#fff;border-color:var(--blue);}
+  .list{display:flex;flex-direction:column;gap:12px;overflow:auto;}
+  .hos{border:1px solid var(--line);border-radius:16px;padding:16px 18px;background:#fff;}
+  .hos .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .hos h3{margin:0;font-size:18px;}
+  .tag{font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;flex:none;}
+  .tag.open{background:#e6f6ee;color:var(--green);}
+  .tag.closed{background:#f2f4f7;color:#8a97a6;}
+  .tag.emg{background:#fdecea;color:var(--red);}
+  .hos .meta{color:var(--muted);font-size:14px;margin:6px 0 12px;}
+  .hos .dept{display:inline-block;background:var(--soft);color:var(--blue-d);font-size:13px;padding:4px 10px;border-radius:8px;margin:0 6px 6px 0;}
+  .hos .acts{display:flex;gap:8px;margin-top:6px;}
+  .mini{flex:1;text-align:center;border:1px solid var(--line);border-radius:10px;padding:9px 0;font-size:14px;font-weight:600;color:var(--blue-d);background:var(--panel);cursor:pointer;}
+  .mini.call{background:var(--blue);color:#fff;border-color:var(--blue);}
+  .dist{font-family:'Poppins',sans-serif;color:var(--blue);font-weight:700;}
+
+  @media(max-width:900px){ .layout{grid-template-columns:1fr;} .map{min-height:340px;} .menu{display:none;} }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="nav-in">
+    <a class="logo" href="index.html">
+      <span class="mark"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" fill="#fff"/></svg></span>
+      닥터라우터 <span class="en">Dr.Router</span>
+    </a>
+    <nav class="menu">
+      <a href="index.html">홈</a>
+      <a href="chat.html">AI 문진</a>
+      <a href="hospitals.html" class="active">주변 병원</a>
+    </nav>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- MAP MOCKUP -->
+  <div class="map">
+    <span class="badge-map">📍 내 위치 기준 · 추천과: 외과 · 반경 2km</span>
+    <svg width="100%" height="100%" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" aria-label="지도 목업">
+      <rect width="800" height="600" fill="#e3edf4"/>
+      <path class="water" d="M0 470 Q200 440 400 480 T800 460 V600 H0 Z"/>
+      <circle class="park" cx="150" cy="150" r="80"/>
+      <rect class="park" x="560" y="90" width="150" height="110" rx="16"/>
+      <g class="roads" stroke-width="22">
+        <line x1="0" y1="250" x2="800" y2="230"/>
+        <line x1="380" y1="0" x2="420" y2="600"/>
+      </g>
+      <g class="roads minor" stroke-width="10">
+        <line x1="0" y1="120" x2="800" y2="110"/>
+        <line x1="0" y1="380" x2="800" y2="400"/>
+        <line x1="180" y1="0" x2="200" y2="600"/>
+        <line x1="620" y1="0" x2="640" y2="600"/>
+      </g>
+    </svg>
+
+    <div class="me-dot" style="left:48%;top:52%"></div>
+
+    <div class="pin" style="left:40%;top:40%">
+      <span class="lbl">서울튼튼외과</span>
+      <svg width="34" height="34" viewBox="0 0 24 24"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z" fill="#1a6fb5"/><path d="M11 6h2v2h2v2h-2v2h-2v-2H9V8h2z" fill="#fff"/></svg>
+    </div>
+    <div class="pin" style="left:58%;top:34%">
+      <span class="lbl">연세하늘내과</span>
+      <svg width="34" height="34" viewBox="0 0 24 24"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z" fill="#1a6fb5"/><path d="M11 6h2v2h2v2h-2v2h-2v-2H9V8h2z" fill="#fff"/></svg>
+    </div>
+    <div class="pin" style="left:66%;top:60%">
+      <span class="lbl" style="color:#b23b33">중앙응급의료센터</span>
+      <svg width="38" height="38" viewBox="0 0 24 24"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z" fill="#e0564e"/><path d="M11 6h2v2h2v2h-2v2h-2v-2H9V8h2z" fill="#fff"/></svg>
+    </div>
+    <div class="pin" style="left:34%;top:64%">
+      <span class="lbl">우리약국</span>
+      <svg width="30" height="30" viewBox="0 0 24 24"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z" fill="#2e9e6b"/><path d="M11 6h2v2h2v2h-2v2h-2v-2H9V8h2z" fill="#fff"/></svg>
+    </div>
+  </div>
+
+  <!-- LIST -->
+  <div class="panel">
+    <div class="filters">
+      <span class="chip on">전체</span>
+      <span class="chip">병원</span>
+      <span class="chip">약국</span>
+      <span class="chip">응급실</span>
+      <span class="chip">지금 진료중</span>
+    </div>
+    <div class="list">
+
+      <div class="hos">
+        <div class="top">
+          <div><h3>서울튼튼외과의원</h3><div class="meta">서울 ○○구 ○○로 12 · <span class="dist">320m</span></div></div>
+          <span class="tag open">진료중</span>
+        </div>
+        <span class="dept">외과</span><span class="dept">정형외과</span>
+        <div class="meta" style="margin:8px 0 10px">추천 진료과 '외과'와 일치 · 도보 5분</div>
+        <div class="acts"><button class="mini">상세 정보</button><button class="mini call">📞 전화</button></div>
+      </div>
+
+      <div class="hos">
+        <div class="top">
+          <div><h3>연세하늘내과의원</h3><div class="meta">서울 ○○구 ○○로 45 · <span class="dist">540m</span></div></div>
+          <span class="tag open">진료중</span>
+        </div>
+        <span class="dept">내과</span><span class="dept">소화기내과</span>
+        <div class="meta" style="margin:8px 0 10px">2순위 진료과 '내과' 해당</div>
+        <div class="acts"><button class="mini">상세 정보</button><button class="mini call">📞 전화</button></div>
+      </div>
+
+      <div class="hos" style="border-color:#f6d2ce">
+        <div class="top">
+          <div><h3>중앙응급의료센터</h3><div class="meta">서울 ○○구 ○○대로 100 · <span class="dist">1.2km</span></div></div>
+          <span class="tag emg">응급실 24h</span>
+        </div>
+        <span class="dept">응급의학과</span>
+        <div class="meta" style="margin:8px 0 10px">가용 병상 12 · 증상 악화 시 즉시 방문</div>
+        <div class="acts"><button class="mini">상세 정보</button><button class="mini call">📞 119 / 전화</button></div>
+      </div>
+
+      <div class="hos">
+        <div class="top">
+          <div><h3>우리약국</h3><div class="meta">서울 ○○구 ○○로 8 · <span class="dist">210m</span></div></div>
+          <span class="tag closed">18:00 마감</span>
+        </div>
+        <span class="dept">약국</span>
+        <div class="meta" style="margin:8px 0 10px">처방전 조제 가능</div>
+        <div class="acts"><button class="mini">상세 정보</button><button class="mini call">📞 전화</button></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

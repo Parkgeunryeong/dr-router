@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>최건 역할 (상세) · 닥터라우터 가이드</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Poppins:wght@600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/guide.css">
+</head>
+<body>
+<header class="nav"><div class="nav-in">
+  <span class="brand"><span class="mark"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" fill="#fff"/></svg></span>닥터라우터 <span class="en">Guide</span></span>
+  <a class="item" href="index.html">홈</a>
+  <a class="item" href="flow.html">프로젝트 흐름</a>
+  <a class="item" href="setup.html">세팅 방법</a>
+  <a class="item" href="role-a.html">박근령</a>
+  <a class="item" href="role-b.html">박태준</a>
+  <a class="item active" href="role-c.html">최건</a>
+  <a class="item" href="role-d.html">이상현</a>
+  <a class="item" href="role-e.html">고원영</a>
+</div></header>
+
+<main class="wrap">
+  <p class="eyebrow">Role · 최건 (상세 가이드)</p>
+  <h1>백엔드 · 공공 API 연동</h1>
+  <p class="lead">공공데이터포털에서 병원·응급 데이터를 가져와 우리 형식(<code>HospitalOut</code>)으로 정규화하는 것이 핵심 업무입니다. 아래 순서대로 따라가세요.</p>
+
+  <div class="callout"><b>최종 목표</b> — <code>search_hospitals(dept, lat, lng)</code>가 호출되면 주변 병원 리스트를
+  <code>[{name, dept, distance_m, is_open, phone}, ...]</code> 형식으로 돌려주는 것. (형식 = <code>backend/api/schemas.py</code>의 <code>HospitalOut</code>)</div>
+
+  <h2>담당 파일</h2>
+  <table>
+    <tr><th>파일</th><th>할 일</th></tr>
+    <tr><td><code>backend/tools/hira.py</code></td><td>심평원 병원정보 API 호출·정규화</td></tr>
+    <tr><td><code>backend/tools/egen.py</code></td><td>E-Gen 응급실·약국 API 호출·정규화</td></tr>
+    <tr><td><code>backend/agent/nodes/search.py</code></td><td>위 두 함수를 묶어 State에 <code>hospitals</code> 채우기</td></tr>
+    <tr><td><code>backend/api/routes.py</code> / <code>schemas.py</code></td><td>엔드포인트 + 응답 계약 (박근령과 협의)</td></tr>
+  </table>
+
+  <h2>STEP 0 · 공공데이터포털 API 키 발급</h2>
+  <div class="step"><div class="n">1</div><div class="b">
+    <h3>회원가입 &amp; 로그인</h3>
+    <p><a href="https://www.data.go.kr" target="_blank">data.go.kr</a> 가입. (팀에서 1명 계정으로 받아 키를 공유해도 되고, 각자 받아도 됨)</p>
+  </div></div>
+  <div class="step"><div class="n">2</div><div class="b">
+    <h3>필요한 데이터 2개 활용신청</h3>
+    <ul>
+      <li>검색창에 <b>"건강보험심사평가원 병원정보서비스"</b> → 활용신청</li>
+      <li>검색창에 <b>"국립중앙의료원 전국 응급의료기관 정보 조회 서비스"</b> (E-Gen) → 활용신청</li>
+      <li>(선택) <b>"전국 약국 정보 조회 서비스"</b> → 활용신청</li>
+    </ul>
+    <p>개발계정은 보통 <b>즉시 승인</b>, 일일 트래픽 제한(예: 1,000건)이 있습니다.</p>
+  </div></div>
+  <div class="step"><div class="n">3</div><div class="b">
+    <h3>인증키 확인 → .env에 저장</h3>
+    <p>마이페이지 → 오픈API → 인증키. <b>일반 인증키(Decoding)</b> 값을 복사해서 <code>.env</code>에 넣으세요.</p>
+<pre><code>HIRA_API_KEY=여기에_심평원_Decoding_키
+EGEN_API_KEY=여기에_E-Gen_Decoding_키</code></pre>
+    <div class="callout warn"><b>키가 2종류입니다</b> — Encoding(이미 URL인코딩됨) / Decoding(원본). 아래 코드처럼 <code>requests</code>의 <code>params=</code>로 넘길 땐 <b>Decoding 키</b>를 쓰세요. (Encoding 키를 params로 넘기면 <b>이중 인코딩</b>되어 인증 실패 — 가장 흔한 실수)</div>
+  </div></div>
+
+  <h2>STEP 1 · 키부터 테스트 (curl)</h2>
+  <p>코드 짜기 전에 키가 되는지 먼저 확인. (심평원 병원 목록, 서울 지역 50건)</p>
+<pre><code># PowerShell / cmd / Git Bash 공통 (키는 Decoding 값)
+curl "http://apis.data.go.kr/B551182/hospInfoServicev2/getHospBasisList?serviceKey=<키>&_type=json&pageNo=1&numOfRows=5&sidoCd=110000"</code></pre>
+  <p><code>response.body.items.item</code> 배열이 보이면 성공. <code>resultCode</code>가 <code>00</code>이면 정상입니다.</p>
+  <div class="callout"><b>엔드포인트 버전 주의</b> — 경로의 <code>hospInfoServicev2</code> 버전 숫자는 바뀔 수 있어요. 안 되면 data.go.kr 상세페이지의 <b>"End Point"</b>를 그대로 복사해서 쓰세요.</div>
+
+  <h2>STEP 2 · hira.py (심평원 병원 검색)</h2>
+  <p>아래는 확인된 사양 기준 뼈대입니다. <span class="badge">확인완료</span> 표시 외의 값은 data.go.kr 상세페이지 <b>요청변수/출력결과 표</b>에서 최종 확인하세요.</p>
+<pre><code>import os
+from math import radians, sin, cos, asin, sqrt
+from typing import List, Dict
+import requests
+
+from backend.config import HIRA_API_KEY
+
+# ✅ 확인완료: base + operation (소스코드로 검증)
+BASE = "http://apis.data.go.kr/B551182/hospInfoServicev2/getHospBasisList"
+
+# 시도코드(숫자) — 일부. 전체는 HIRA 보건의료빅데이터개방시스템 코드조회
+SIDO = {"서울": "110000", "부산": "210000", "대구": "220000",
+        "인천": "230000", "광주": "240000", "대전": "250000",
+        "경기": "310000", "전남": "360000", "세종": "410000"}
+
+# 진료과목코드(dgsbjtCd) — 일부. ⚠ 코드값은 상세페이지에서 확인 후 채우기
+DGSBJT = {"내과": "01", "신경과": "02", "정신건강의학과": "03",
+          "외과": "04", "정형외과": "05", "소아청소년과": "10",
+          "산부인과": "11", "안과": "12", "이비인후과": "13",
+          "피부과": "14", "비뇨의학과": "15", "가정의학과": "23"}
+
+
+def _haversine_m(lat1, lng1, lat2, lng2):
+    """두 좌표 사이 거리(m). 좌표 없으면 None."""
+    try:
+        lat2, lng2 = float(lat2), float(lng2)
+    except (TypeError, ValueError):
+        return None
+    if not lat2 or not lng2:
+        return None
+    R = 6371000
+    dlat, dlng = radians(lat2 - lat1), radians(lng2 - lng1)
+    a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlng / 2) ** 2
+    return int(2 * R * asin(sqrt(a)))
+
+
+def search_hospitals(dept: str, lat: float, lng: float,
+                     sido: str = "서울", top: int = 5) -> List[Dict]:
+    params = {
+        "serviceKey": HIRA_API_KEY,   # ✅ Decoding 키
+        "_type": "json",             # ✅ JSON 응답
+        "pageNo": 1,                  # ✅ 확인완료
+        "numOfRows": 50,              # ✅ 확인완료
+        "sidoCd": SIDO.get(sido, "110000"),   # ✅ 요청변수명 확인완료
+        "dgsbjtCd": DGSBJT.get(dept, ""),     # ✅ 요청변수명 확인완료
+    }
+    r = requests.get(BASE, params=params, timeout=5)
+    r.raise_for_status()
+
+    body = r.json().get("response", {}).get("body", {})
+    items = (body.get("items") or {}).get("item", [])
+    if isinstance(items, dict):   # 1건이면 dict로 옴 → list로 통일
+        items = [items]
+
+    out = []
+    for it in items:
+        # ✅ 응답필드 확인완료: yadmNm, addr, telno, clCdNm
+        # ⚠ 좌표필드(XPos=경도, YPos=위도)는 출력결과 표에서 이름 확인
+        out.append({
+            "name": it.get("yadmNm", ""),
+            "dept": dept,
+            "distance_m": _haversine_m(lat, lng, it.get("YPos"), it.get("XPos")),
+            "is_open": True,          # 운영시간은 상세API 필요 → 우선 True
+            "phone": it.get("telno"),
+        })
+
+    out = [h for h in out if h["distance_m"] is not None]  # 좌표 있는 것만
+    out.sort(key=lambda h: h["distance_m"])                # 가까운 순
+    return out[:top]</code></pre>
+  <div class="callout"><b>왜 거리를 직접 계산하나?</b> — 위치 반경 파라미터(xPos/yPos/radius)는 버전에 따라 제공 여부가 달라요. 그래서 <b>시도로 1차 필터 → 좌표로 거리 계산·정렬</b>이 안전합니다. 상세페이지에 radius 검색이 있으면 그걸 써도 됩니다.</div>
+
+  <h2>STEP 3 · egen.py (응급실·약국)</h2>
+  <p>E-Gen은 <b>실시간 응급실 가용병상</b>이 강점이에요. <span class="badge">확인필요</span> 오퍼레이션·파라미터는 data.go.kr 상세페이지에서 확정하세요. (아래는 표준 사양 기준 뼈대)</p>
+<pre><code>import requests
+from typing import List, Dict
+from backend.config import EGEN_API_KEY
+
+# ⚠ 확인필요: base/operation 을 상세페이지 End Point로 확정
+# 응급실 실시간 가용병상 (표준 사양)
+EGEN_RTBED = "http://apis.data.go.kr/B552657/ErmctInfoInqireService/getEmrrmRltmUsefulSckbdInfoInqire"
+
+
+def search_emergency(lat: float, lng: float,
+                     sido: str = "서울특별시", sgg: str = "") -> List[Dict]:
+    params = {
+        "serviceKey": EGEN_API_KEY,   # Decoding 키
+        "_type": "json",
+        "STAGE1": sido,               # ⚠ 시도명(문자). 파라미터명 확인필요
+        "STAGE2": sgg,                # ⚠ 시군구명(문자). 확인필요
+        "pageNo": 1,
+        "numOfRows": 20,
+    }
+    r = requests.get(EGEN_RTBED, params=params, timeout=5)
+    r.raise_for_status()
+    body = r.json().get("response", {}).get("body", {})
+    items = (body.get("items") or {}).get("item", [])
+    if isinstance(items, dict):
+        items = [items]
+
+    out = []
+    for it in items:
+        # ⚠ 응답필드명 확인필요: dutyName(기관명), dutyTel3(응급실전화),
+        #    hvec(응급실 가용병상수), wgs84Lat/wgs84Lon(좌표)
+        out.append({
+            "name": it.get("dutyName", ""),
+            "dept": "응급의학과",
+            "distance_m": 0,          # 좌표 있으면 hira._haversine_m 재사용
+            "is_open": True,          # 응급실은 24시간 → True
+            "phone": it.get("dutyTel3"),
+        })
+    return out</code></pre>
+  <div class="callout warn"><b>E-Gen은 꼭 상세페이지에서 확정</b> — 공식 명세(요청변수·출력결과 표)를 코드 연구로 확인하지 못했어요. STEP 1처럼 <b>curl로 먼저 한 번 호출</b>해서 실제 응답 필드명을 눈으로 보고 코드에 반영하세요. (약국은 별도 서비스 <code>getParmacyListInfoInqire</code> 계열)</div>
+
+  <h2>STEP 4 · search 노드 연결</h2>
+  <p><code>backend/agent/nodes/search.py</code>에서 위 두 함수를 묶습니다. (이미 뼈대가 있어요)</p>
+<pre><code>def search_hospitals(state):
+    depts = state.get("departments", [])
+    loc = state.get("location", {}) or {}
+    top_dept = depts[0]["name"] if depts else None
+
+    hospitals = []
+    if top_dept and loc.get("lat") and loc.get("lng"):
+        hospitals += hira.search_hospitals(top_dept, loc["lat"], loc["lng"])
+        hospitals += egen.search_emergency(loc["lat"], loc["lng"])
+    state["hospitals"] = hospitals
+    return state</code></pre>
+
+  <h2>STEP 5 · 전체 테스트</h2>
+<pre><code># 1) 서버 실행
+uvicorn backend.main:app --reload
+
+# 2) API 직접 호출 (좌표 = 서울시청 근처)
+curl -X POST "http://localhost:8000/api/chat" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"message\":\"무릎이 아파요\",\"lat\":37.5665,\"lng\":126.9780}"</code></pre>
+  <p>응답 JSON의 <code>hospitals</code> 배열에 병원이 채워지면 성공. (분류가 아직이면 <code>departments</code>가 비어 병원도 빌 수 있으니, 먼저 <code>search_hospitals("정형외과", lat, lng)</code>를 단독 호출해 테스트해도 됩니다.)</p>
+
+  <h2>자주 겪는 함정 체크리스트</h2>
+  <table>
+    <tr><th>증상</th><th>원인 / 해결</th></tr>
+    <tr><td>인증 실패(SERVICE_KEY_IS_NOT_REGISTERED 등)</td><td>Encoding 키를 <code>params=</code>로 넘김 → <b>Decoding 키</b> 사용</td></tr>
+    <tr><td>XML만 오고 JSON이 안 옴</td><td><code>_type=json</code> 파라미터 빠짐</td></tr>
+    <tr><td><code>resultCode</code>가 00이 아님</td><td>헤더의 <code>resultMsg</code>를 로그로 찍어 원인 확인</td></tr>
+    <tr><td>item이 하나일 때 에러</td><td>1건이면 <b>dict</b>로 옴 → list로 통일 처리(위 코드 참고)</td></tr>
+    <tr><td>https로 안 됨</td><td>base가 <b>http</b> (소스코드 확인값). https면 상세페이지 End Point 확인</td></tr>
+  </table>
+
+  <h2>최종 체크리스트</h2>
+  <ul>
+    <li>□ data.go.kr 키 2개 발급 → <code>.env</code> 저장</li>
+    <li>□ curl로 심평원·E-Gen 각각 1회 호출 성공</li>
+    <li>□ <code>hira.search_hospitals()</code>가 정규화된 리스트 반환</li>
+    <li>□ <code>egen.search_emergency()</code> 응답필드 실제값으로 교정</li>
+    <li>□ <code>search.py</code> 연결 후 <code>/api/chat</code>에서 hospitals 채워짐</li>
+  </ul>
+
+  <h2>참고 링크</h2>
+  <ul>
+    <li><a href="https://www.data.go.kr/data/15001698/openapi.do" target="_blank">심평원 병원정보서비스 (data.go.kr)</a> — 요청변수/출력결과 표</li>
+    <li><a href="https://opendata.hira.or.kr" target="_blank">보건의료빅데이터개방시스템</a> — 시도/진료과목 등 코드조회</li>
+    <li>data.go.kr에서 "응급의료기관", "약국 정보 조회"로 검색 → E-Gen 상세페이지</li>
+  </ul>
+  <div class="callout"><b>원칙</b> — 외부 API가 막히거나 느리면 <code>try/except</code>로 빈 리스트 반환 + 로그. 데모가 멈추지 않는 게 우선이에요. (정 안 되면 샘플 데이터로 시연)</div>
+
+  <div class="pager"><a href="role-b.html">← 박태준</a><a href="role-d.html">이상현 역할 →</a></div>
+</main>
+<div class="footer">닥터라우터(Dr.Router) 개발 가이드 · 최건 (상세)</div>
+</body>
+</html>

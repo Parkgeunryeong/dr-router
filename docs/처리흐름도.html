@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>닥터라우터 처리 흐름도</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=Poppins:wght@600&display=swap">
+<style>
+  body{margin:0;background:#ffffff;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:'Noto Sans KR',sans-serif}
+  .fig{width:1200px;max-width:96vw;padding:20px}
+  svg{width:100%;height:auto;display:block}
+  text{font-family:'Noto Sans KR','Malgun Gothic',sans-serif}
+</style>
+</head>
+<body>
+<div class="fig">
+<svg viewBox="0 0 1200 600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="bh" markerWidth="10" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#1a6fb5"></path></marker>
+    <marker id="rh" markerWidth="10" markerHeight="8" refX="7.5" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#e0564e"></path></marker>
+  </defs>
+
+  <!-- 외부 데이터 소스 -->
+  <rect x="544" y="130" width="180" height="72" rx="12" fill="#eaf2fb" stroke="#cfe0f2" stroke-width="1.5"></rect>
+  <text x="634" y="162" text-anchor="middle" font-size="18" font-weight="700" fill="#155a94">Vector DB</text>
+  <text x="634" y="185" text-anchor="middle" font-size="13" fill="#5d7088">질환·진료과 문서</text>
+
+  <rect x="746" y="130" width="180" height="72" rx="12" fill="#eaf2fb" stroke="#cfe0f2" stroke-width="1.5"></rect>
+  <text x="836" y="162" text-anchor="middle" font-size="18" font-weight="700" fill="#155a94">공공 API</text>
+  <text x="836" y="185" text-anchor="middle" font-size="13" fill="#5d7088">심평원 · E-Gen</text>
+
+  <!-- 사용자 -->
+  <circle cx="78" cy="330" r="40" fill="#eef4fb" stroke="#1a6fb5" stroke-width="2"></circle>
+  <circle cx="78" cy="320" r="12" fill="#1a6fb5"></circle>
+  <path d="M58 350 C58 336 98 336 98 350 Z" fill="#1a6fb5"></path>
+  <text x="78" y="392" text-anchor="middle" font-size="15" font-weight="700" fill="#14304d">사용자</text>
+
+  <!-- 메인 스파인 박스 -->
+  <rect x="140" y="294" width="180" height="72" rx="12" fill="#f6f9fc" stroke="#cfe0f2" stroke-width="1.5"></rect>
+  <text x="230" y="326" text-anchor="middle" font-size="18" font-weight="700" fill="#14304d">증상 수집</text>
+  <text x="230" y="349" text-anchor="middle" font-size="13" fill="#8396ac">Memory</text>
+
+  <rect x="342" y="294" width="180" height="72" rx="12" fill="#fdf1f0" stroke="#e0564e" stroke-width="2"></rect>
+  <text x="432" y="326" text-anchor="middle" font-size="18" font-weight="700" fill="#c0433b">응급도 판별</text>
+  <text x="432" y="349" text-anchor="middle" font-size="13" fill="#c0433b">분기점 · 매 입력</text>
+
+  <rect x="544" y="294" width="180" height="72" rx="12" fill="#f6f9fc" stroke="#cfe0f2" stroke-width="1.5"></rect>
+  <text x="634" y="326" text-anchor="middle" font-size="18" font-weight="700" fill="#14304d">진료과 분류</text>
+  <text x="634" y="349" text-anchor="middle" font-size="13" fill="#8396ac">RAG</text>
+
+  <rect x="746" y="294" width="180" height="72" rx="12" fill="#f6f9fc" stroke="#cfe0f2" stroke-width="1.5"></rect>
+  <text x="836" y="326" text-anchor="middle" font-size="18" font-weight="700" fill="#14304d">의료기관 검색</text>
+  <text x="836" y="349" text-anchor="middle" font-size="13" fill="#8396ac">위치 기반</text>
+
+  <rect x="948" y="294" width="180" height="72" rx="12" fill="#f6f9fc" stroke="#cfe0f2" stroke-width="1.5"></rect>
+  <text x="1038" y="326" text-anchor="middle" font-size="18" font-weight="700" fill="#14304d">결과 안내</text>
+  <text x="1038" y="349" text-anchor="middle" font-size="13" fill="#8396ac">사용자에게 반환</text>
+
+  <!-- 응급 분기 박스 -->
+  <rect x="342" y="462" width="180" height="70" rx="12" fill="#e0564e"></rect>
+  <text x="432" y="494" text-anchor="middle" font-size="17" font-weight="700" fill="#ffffff">119 · 응급실</text>
+  <text x="432" y="516" text-anchor="middle" font-size="13" fill="#ffe3e0">즉시 안내</text>
+
+  <!-- 스파인 화살표 -->
+  <line x1="120" y1="330" x2="138" y2="330" stroke="#1a6fb5" stroke-width="2" marker-end="url(#bh)"></line>
+  <line x1="322" y1="330" x2="340" y2="330" stroke="#1a6fb5" stroke-width="2" marker-end="url(#bh)"></line>
+  <line x1="524" y1="330" x2="542" y2="330" stroke="#1a6fb5" stroke-width="2" marker-end="url(#bh)"></line>
+  <line x1="726" y1="330" x2="744" y2="330" stroke="#1a6fb5" stroke-width="2" marker-end="url(#bh)"></line>
+  <line x1="928" y1="330" x2="946" y2="330" stroke="#1a6fb5" stroke-width="2" marker-end="url(#bh)"></line>
+
+  <!-- Vector DB 요청/응답 -->
+  <line x1="618" y1="294" x2="618" y2="204" stroke="#1a6fb5" stroke-width="2" marker-end="url(#bh)"></line>
+  <line x1="650" y1="204" x2="650" y2="292" stroke="#1a6fb5" stroke-width="2" marker-end="url(#bh)"></line>
+  <text x="664" y="243" font-size="12.5" fill="#5d7088">증상 쿼리</text>
+  <text x="664" y="272" font-size="12.5" fill="#5d7088">근거 문서</text>
+
+  <!-- 공공 API 요청/응답 -->
+  <line x1="820" y1="294" x2="820" y2="204" stroke="#1a6fb5" stroke-width="2" marker-end="url(#bh)"></line>
+  <line x1="852" y1="204" x2="852" y2="292" stroke="#1a6fb5" stroke-width="2" marker-end="url(#bh)"></line>
+  <text x="866" y="243" font-size="12.5" fill="#5d7088">진료과·위치</text>
+  <text x="866" y="272" font-size="12.5" fill="#5d7088">병원 목록</text>
+
+  <!-- 응급 분기 화살표 -->
+  <line x1="432" y1="366" x2="432" y2="460" stroke="#e0564e" stroke-width="2" marker-end="url(#rh)"></line>
+  <text x="446" y="418" font-size="13" font-weight="700" fill="#c0433b">응급 시</text>
+</svg>
+</div>
+</body>
+</html>

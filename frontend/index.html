@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>닥터라우터 Dr.Router</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Poppins:wght@600;700&display=swap">
+<style>
+  :root{
+    --blue:#1a6fb5; --blue-d:#155a94; --ink:#14304d; --muted:#5d7088;
+    --bg:#ffffff; --panel:#f6f9fc; --line:#e7edf4; --soft:#eaf2fb; --red:#e0564e; --green:#2e9e6b;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Noto Sans KR',sans-serif;color:var(--ink);background:var(--bg);line-height:1.5;}
+  a{color:inherit;text-decoration:none;}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px;}
+
+  /* nav */
+  header.nav{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);}
+  .nav-in{display:flex;align-items:center;justify-content:space-between;height:70px;}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:900;font-size:21px;}
+  .logo .mark{width:34px;height:34px;border-radius:9px;background:var(--blue);display:flex;align-items:center;justify-content:center;}
+  .logo .en{font-family:'Poppins',sans-serif;color:var(--blue);}
+  .menu{display:flex;gap:30px;font-weight:500;color:var(--muted);}
+  .menu a.active,.menu a:hover{color:var(--blue);}
+  .btn{display:inline-flex;align-items:center;gap:8px;background:var(--blue);color:#fff;font-weight:700;padding:12px 22px;border-radius:999px;border:none;cursor:pointer;font-size:15px;}
+  .btn:hover{background:var(--blue-d);}
+  .btn.ghost{background:var(--soft);color:var(--blue-d);}
+
+  /* hero */
+  .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;padding:70px 0 60px;}
+  .eyebrow{font-family:'Poppins',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);font-weight:600;font-size:14px;}
+  .hero h1{font-size:54px;font-weight:900;line-height:1.14;margin:16px 0 18px;}
+  .hero p.lead{font-size:20px;color:var(--muted);margin:0 0 28px;}
+  .hero .cta{display:flex;gap:14px;flex-wrap:wrap;}
+  .pill-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px;}
+  .pill{background:var(--soft);color:var(--blue-d);font-size:14px;font-weight:500;padding:8px 16px;border-radius:999px;}
+  .hero-art{display:flex;justify-content:center;}
+
+  /* section */
+  section.block{padding:56px 0;}
+  .sec-title{font-size:30px;font-weight:900;text-align:center;}
+  .sec-sub{text-align:center;color:var(--muted);margin:10px 0 40px;}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:30px;}
+  .ic{width:54px;height:54px;border-radius:14px;background:var(--soft);display:flex;align-items:center;justify-content:center;margin-bottom:16px;}
+  .ic.red{background:#fdecea;}
+  .card h3{margin:0 0 8px;font-size:21px;}
+  .card p{margin:0;color:var(--muted);font-size:15px;}
+
+  /* steps */
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;counter-reset:s;}
+  .step{background:#fff;border:1px solid var(--line);border-radius:18px;padding:26px 22px;position:relative;}
+  .step .n{width:40px;height:40px;border-radius:50%;background:var(--blue);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;margin-bottom:14px;}
+  .step h4{margin:0 0 6px;font-size:18px;}
+  .step p{margin:0;color:var(--muted);font-size:14px;}
+
+  /* banner */
+  .cta-banner{background:var(--ink);border-radius:24px;padding:48px;text-align:center;color:#eef4fb;}
+  .cta-banner h2{font-size:30px;margin:0 0 10px;font-weight:900;}
+  .cta-banner p{margin:0 0 24px;color:#b7c6da;}
+
+  footer{border-top:1px solid var(--line);padding:30px 0;color:var(--muted);font-size:14px;text-align:center;}
+  .note{max-width:1120px;margin:0 auto;padding:0 24px 40px;}
+  .note small{display:block;color:#9aa7b7;font-size:13px;line-height:1.7;}
+
+  @media(max-width:860px){
+    .hero{grid-template-columns:1fr;} .hero-art{order:-1;}
+    .grid3,.steps{grid-template-columns:1fr 1fr;}
+    .menu{display:none;}
+    .hero h1{font-size:40px;}
+  }
+  @media(max-width:520px){ .grid3,.steps{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="logo" href="index.html">
+      <span class="mark"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" fill="#fff"/></svg></span>
+      닥터라우터 <span class="en">Dr.Router</span>
+    </a>
+    <nav class="menu">
+      <a href="index.html" class="active">홈</a>
+      <a href="chat.html">AI 문진</a>
+      <a href="hospitals.html">주변 병원</a>
+    </nav>
+    <a class="btn" href="chat.html">증상 입력 시작 →</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <div>
+      <p class="eyebrow">AI Medical Routing Agent</p>
+      <h1>증상을 말하면,<br>알맞은 <span style="color:var(--blue)">진료과</span>로<br>안내해 드려요</h1>
+      <p class="lead">어느 과에 가야 할지 고민될 때. 닥터라우터가 증상을 듣고 근거와 함께 진료과를 알려주고, 가까운 병원·약국·응급실까지 안내합니다.</p>
+      <div class="cta">
+        <a class="btn" href="chat.html">AI 문진 시작하기</a>
+        <a class="btn ghost" href="hospitals.html">주변 병원 둘러보기</a>
+      </div>
+      <div class="pill-row">
+        <span class="pill">✓ 자가진단이 아닌 진료과 안내</span>
+        <span class="pill">✓ 근거 기반 설명</span>
+        <span class="pill">✓ 응급 시 119 안내</span>
+      </div>
+    </div>
+    <div class="hero-art">
+      <svg width="420" height="420" viewBox="0 0 520 520" aria-label="병원 위치 안내 일러스트">
+        <circle cx="260" cy="270" r="238" fill="#eaf2fb"/>
+        <ellipse cx="260" cy="454" rx="155" ry="22" fill="#d6e4f4"/>
+        <rect x="150" y="222" width="220" height="220" rx="18" fill="#fff" stroke="#1a6fb5" stroke-width="6"/>
+        <rect x="150" y="224" width="220" height="50" rx="16" fill="#1a6fb5"/>
+        <rect x="252" y="233" width="16" height="32" rx="3" fill="#fff"/>
+        <rect x="244" y="241" width="32" height="16" rx="3" fill="#fff"/>
+        <rect x="172" y="300" width="44" height="44" rx="7" fill="#cfe2f5"/>
+        <rect x="304" y="300" width="44" height="44" rx="7" fill="#cfe2f5"/>
+        <rect x="172" y="360" width="44" height="44" rx="7" fill="#cfe2f5"/>
+        <rect x="304" y="360" width="44" height="44" rx="7" fill="#cfe2f5"/>
+        <rect x="235" y="372" width="50" height="70" rx="6" fill="#1a6fb5"/>
+        <path d="M260 66 C224 66 196 94 196 130 C196 174 260 212 260 212 C260 212 324 174 324 130 C324 94 296 66 260 66 Z" fill="#e0564e"/>
+        <circle cx="260" cy="128" r="34" fill="#fff"/>
+        <rect x="252" y="110" width="16" height="36" rx="3" fill="#e0564e"/>
+        <rect x="242" y="120" width="36" height="16" rx="3" fill="#e0564e"/>
+      </svg>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="sec-title">무엇을 해주나요</h2>
+    <p class="sec-sub">증상 이해부터 병원 안내까지, 하나의 대화로</p>
+    <div class="grid3">
+      <div class="card">
+        <div class="ic"><svg width="28" height="28" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" fill="#1a6fb5"/></svg></div>
+        <h3>진료과 분류</h3>
+        <p>증상을 분석해 적합한 진료과를 근거와 함께 추천합니다. (상위 후보 Top-N)</p>
+      </div>
+      <div class="card">
+        <div class="ic"><svg width="28" height="28" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" fill="#1a6fb5"/></svg></div>
+        <h3>근거 있는 설명</h3>
+        <p>공공 의료 문서(RAG)를 바탕으로 "왜 그 과인지" 이해하기 쉽게 설명합니다.</p>
+      </div>
+      <div class="card">
+        <div class="ic red"><svg width="28" height="28" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" fill="#e0564e"/></svg></div>
+        <h3>병원 안내 · 응급 가드레일</h3>
+        <p>주변 병원·약국·응급실을 안내하고, 응급 증상이면 즉시 119를 안내합니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="sec-title">이렇게 작동해요</h2>
+    <p class="sec-sub">증상 입력 → 진료과 안내까지 4단계</p>
+    <div class="steps">
+      <div class="step"><div class="n">1</div><h4>증상 입력</h4><p>텍스트 또는 음성으로 증상을 말합니다.</p></div>
+      <div class="step"><div class="n">2</div><h4>AI 문진</h4><p>부족한 정보는 되물으며 증상을 파악합니다.</p></div>
+      <div class="step"><div class="n">3</div><h4>진료과 추천</h4><p>근거와 함께 알맞은 진료과를 알려줍니다.</p></div>
+      <div class="step"><div class="n">4</div><h4>병원 안내</h4><p>가까운 의료기관을 지도로 안내합니다.</p></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="cta-banner">
+      <h2>지금 바로 증상을 말해보세요</h2>
+      <p>1분이면 어느 과에 가야 할지 알 수 있어요.</p>
+      <a class="btn ghost" href="chat.html" style="background:#fff;color:var(--blue-d)">AI 문진 시작하기 →</a>
+    </div>
+  </section>
+</main>
+
+<div class="note">
+  <small>※ 본 서비스는 의학적 진단이 아닌 '진료과 안내'를 제공합니다. 증상이 심하거나 응급 상황이면 즉시 119 또는 가까운 응급실을 이용하세요. · 본 페이지는 디자인 목업입니다.</small>
+</div>
+
+<footer>© 2026 닥터라우터 Dr.Router · AI Agent 수업 프로젝트</footer>
+
+</body>
+</html>
