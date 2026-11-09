@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>시작하기 · 닥터라우터 가이드</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Poppins:wght@600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/guide.css">
+</head>
+<body>
+<header class="nav"><div class="nav-in">
+  <span class="brand"><span class="mark"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" fill="#fff"/></svg></span>닥터라우터 <span class="en">Guide</span></span>
+  <a class="item" href="index.html">홈</a>
+  <a class="item active" href="kickoff.html">시작하기</a>
+  <a class="item" href="flow.html">프로젝트 흐름</a>
+  <a class="item" href="setup.html">세팅 방법</a>
+  <a class="item" href="role-a.html">박근령</a>
+  <a class="item" href="role-b.html">박태준</a>
+  <a class="item" href="role-c.html">최건</a>
+  <a class="item" href="role-d.html">이상현</a>
+  <a class="item" href="role-e.html">고원영</a>
+</div></header>
+
+<main class="wrap">
+  <p class="eyebrow">Kickoff · 가장 먼저 할 일</p>
+  <h1>🚀 시작하기 — 킥오프 체크리스트</h1>
+  <p class="lead">순서는 딱 셋입니다. <b>① 회의로 정하기 → ② 박근령이 관통 → ③ 각자 병렬.</b> 이 순서만 지키면 안 꼬여요.</p>
+
+  <div class="callout ok" style="font-size:16px"><b>먼저 이것만 기억하세요</b> — "진료과 목록"과 "State 스키마" 2개를 회의에서 먼저 확정하면, 나머지는 각자 달릴 수 있습니다.</div>
+
+  <h2>STEP 1 · 첫 모임에서 "함께" 정할 것 (30분)</h2>
+  <p>각자 코딩 시작 전에 아래를 확정하세요. <b>안 정하고 시작하면 나중에 다 충돌나요.</b></p>
+  <table>
+    <tr><th>정할 것</th><th>결정</th><th>주도</th></tr>
+    <tr><td>□ <b>State 스키마</b> (<code>state.py</code>)</td><td>필드 확정 → 동결</td><td><span class="badge">박근령</span></td></tr>
+    <tr><td>□ <b>진료과 목록</b> (예: 15개)</td><td>어떤 과를 다룰지</td><td><span class="badge">전원</span></td></tr>
+    <tr><td>□ API 계약 (<code>schemas.py</code>)</td><td>요청/응답 형식</td><td><span class="badge">최건·박근령</span></td></tr>
+    <tr><td>□ GPT 모델명</td><td>수업이 준 정확한 이름</td><td><span class="badge">전원</span></td></tr>
+    <tr><td>□ 공공 API 키 발급 방식</td><td>1명 공유 vs 각자</td><td><span class="badge">최건</span></td></tr>
+    <tr><td>□ MVP 범위(데모 경계)</td><td>"어디까지 만들면 끝"</td><td><span class="badge">전원</span></td></tr>
+    <tr><td>□ 파이썬 버전 · 브랜치 규칙</td><td>예: 3.11, feat/이름-작업</td><td><span class="badge">전원</span></td></tr>
+  </table>
+
+  <h2>STEP 2 · 착수 순서</h2>
+
+  <div class="step"><div class="n">0</div><div class="b">
+    <h3>Phase 0 — 첫날 (함께)</h3>
+    <ul>
+      <li>□ 전원: clone → venv → <code>pip install</code> (세팅 페이지대로)</li>
+      <li>□ <b>박근령</b>: <code>state.py</code> 확정 → 팀 공지 ⭐</li>
+      <li>□ 최건·박근령: <code>schemas.py</code> 확정</li>
+      <li>□ 이상현: 요구사항 정의서 FR 초안 → 회의에서 진료과 목록·MVP 확정</li>
+      <li>□ 최건: 공공데이터포털 키 발급 신청</li>
+    </ul>
+  </div></div>
+
+  <div class="step"><div class="n">1</div><div class="b">
+    <h3>Phase 1 — 관통 (박근령 먼저 → 그다음 병렬)</h3>
+    <div class="callout" style="margin-top:0"><b>⭐⭐ 가장 중요한 분기점</b> — 박근령이 <code>graph.py</code>를 <b>스텁(빈 껍데기)으로 전체 관통</b>시켜 "증상 넣으면 끝까지 도는 상태"를 공유하면, <b>그때부터 나머지 4명이 동시에</b> 자기 노드만 채우면 됩니다.</div>
+    <ul>
+      <li>□ <b>박근령</b>: graph 스텁 관통 → 팀 공유</li>
+      <li>□ <b>박태준</b>: 진료과 문서 작성 + Chroma 적재 (<code>retrieve()</code> 동작)</li>
+      <li>□ <b>최건</b>: 서버 실행 확인 + 심평원 API curl 테스트 → <code>hira.py</code></li>
+      <li>□ <b>고원영</b>: 응급 키워드 + 분류 프롬프트 1차</li>
+      <li>□ <b>이상현</b>: 요구사항 정의서 완성</li>
+    </ul>
+  </div></div>
+
+  <div class="step"><div class="n">2</div><div class="b">
+    <h3>Phase 2 — 채우고 붙이기</h3>
+    <ul>
+      <li>□ 박태준: 프론트 <code>chat.html</code> ↔ 백엔드 연결</li>
+      <li>□ 고원영: 분류 완성 → <code>evaluate</code>로 Top-3 측정</li>
+      <li>□ 최건: E-Gen(응급실) 연동 + 발표 준비</li>
+      <li>□ 박근령: 전체 통합·버그 수정</li>
+    </ul>
+  </div></div>
+
+  <h2>STEP 3 · 지금 "내가" 할 일 (한 줄)</h2>
+  <p>헷갈리면 이 표에서 <b>본인 이름의 1순위</b>만 보세요.</p>
+  <table>
+    <tr><th>이름</th><th>지금 1순위</th><th>상세</th></tr>
+    <tr><td><b>박근령</b></td><td>State 스키마 확정·공지 → graph 스텁 관통</td><td><a href="role-a.html">가이드 →</a></td></tr>
+    <tr><td><b>박태준</b></td><td>(관통 후) 진료과 문서 10~15개 + Chroma 적재</td><td><a href="role-b.html">가이드 →</a></td></tr>
+    <tr><td><b>최건</b></td><td>공공데이터포털 키 신청 + 서버 실행 확인</td><td><a href="role-c.html">가이드 →</a></td></tr>
+    <tr><td><b>이상현</b></td><td>요구사항 정의서 FR 초안 (진료과 목록 회의 주도)</td><td><a href="role-d.html">가이드 →</a></td></tr>
+    <tr><td><b>고원영</b></td><td>응급 키워드 보강 + 분류 프롬프트 1차</td><td><a href="role-e.html">가이드 →</a></td></tr>
+  </table>
+
+  <h2>의존 관계 (누가 뭘 먼저 줘야 하나)</h2>
+<pre><code>박근령: State 스키마 ──→ 최건·고원영·박태준 (다 이 형식에 맞춤)
+전원: 진료과 목록 ────→ 박태준(문서)·고원영(분류·평가)·최건(진료과코드)
+박근령: 스텁 관통 ────→ 전원 (각자 노드 채우기 시작)
+박태준: retrieve() ───→ 고원영 (classify에서 사용)</code></pre>
+
+  <div class="callout ok" style="font-size:17px;margin-top:28px">
+    <b>🎯 첫 주 목표 (딱 하나)</b><br>
+    "스텁이라도 <b>증상 입력 → 진료과 추천 → 병원 1개</b>가 끝까지 도는 상태."<br>
+    이 한 줄기가 1주 안에 돌면, 나머지는 각 노드 품질을 올리는 일만 남아요.
+  </div>
+
+  <div class="pager"><a href="index.html">← 홈</a><a href="setup.html">세팅 방법 →</a></div>
+</main>
+<div class="footer">닥터라우터(Dr.Router) 개발 가이드 · 시작하기</div>
+</body>
+</html>
