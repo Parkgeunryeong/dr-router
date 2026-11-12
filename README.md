@@ -35,7 +35,7 @@ dr-router/
 │   │   └── egen.py        #   E-Gen
 │   └── core/
 │       └── emergency_rules.py  # 응급 차단 규칙              [박태준]
-├── frontend/              # 웹 프론트(목업 기반)               [고원영]
+├── frontend/              # 웹 프론트(목업 기반)               [박태준]
 ├── data/                  # 질환/진료과 문서                   [고원영·박태준]
 ├── eval/                  # Top-3 정확도 평가                  [박태준]
 └── docs/                  # 설계·산출물                        [이상현]

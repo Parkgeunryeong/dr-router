@@ -22,10 +22,10 @@
 
 <main class="wrap">
   <p class="eyebrow">Role · 박태준 (상세 가이드)</p>
-  <h1>진료과 분류 · 응급 규칙 · 평가</h1>
-  <p class="lead">AI의 "두뇌"에 해당하는 분류 품질과, 안전의 핵심인 응급 판별, 그리고 성능을 숫자로 증명하는 평가를 담당합니다.</p>
+  <h1>진료과 분류 · 응급 규칙 · 평가 · 프론트엔드</h1>
+  <p class="lead">AI의 "두뇌"에 해당하는 분류 품질, 안전의 핵심인 응급 판별, 성능을 숫자로 증명하는 평가, 그리고 목업 화면을 백엔드에 연결하는 프론트엔드까지 담당합니다.</p>
 
-  <div class="callout"><b>3가지 담당 파일</b> — <code>core/emergency_rules.py</code>(응급), <code>agent/nodes/triage.py</code>·<code>classify.py</code>(판별·분류), <code>eval/</code>(평가). 안전 관련이라 <b>응급 판별을 가장 보수적으로</b> 만드는 게 1순위예요.</div>
+  <div class="callout"><b>담당 파일</b> — <code>core/emergency_rules.py</code>(응급), <code>agent/nodes/triage.py</code>·<code>classify.py</code>(판별·분류), <code>eval/</code>(평가), <code>frontend/</code>(프론트 연결). 안전 관련이라 <b>응급 판별을 가장 보수적으로</b> 만드는 게 1순위예요.</div>
 
   <h1 style="font-size:26px;margin-top:40px;border-top:2px solid var(--soft);padding-top:28px">PART 1 · 응급 규칙 (가장 중요)</h1>
   <p>원칙: <b>"놓치지 않는 것(미탐 최소화)"이 최우선.</b> 애매하면 응급으로 분류하는 게 안전해요. 키워드 규칙을 1차로 쓰고, 여유되면 LLM 판단을 보조로.</p>
@@ -148,14 +148,102 @@ def classify_department(state):
   </ul>
   <div class="callout ok"><b>과하게 올리지 말 것</b> — 85% 정도면 발표용으로 충분해요. 90%를 95%로 올리려 매달리는 게 제일 시간 낭비. 대표 케이스가 잘 되면 OK.</div>
 
+  <h1 style="font-size:26px;margin-top:48px;border-top:2px solid var(--soft);padding-top:28px">PART 4 · 프론트엔드 연결</h1>
+  <p>목업 화면(<code>frontend/</code>)을 백엔드에 연결합니다. FastAPI가 <code>/</code>에서 서빙하므로 같은 출처라 <b>CORS 걱정 없음.</b></p>
+  <table>
+    <tr><th>파일</th><th>역할</th><th>연결 작업</th></tr>
+    <tr><td><code>index.html</code></td><td>메인</td><td>그대로 (버튼 링크만)</td></tr>
+    <tr><td><code>chat.html</code></td><td>AI 문진</td><td>★ 백엔드 연결 (핵심)</td></tr>
+    <tr><td><code>hospitals.html</code></td><td>주변 병원</td><td>응답의 hospitals 렌더링</td></tr>
+    <tr><td><code>assets/app.js</code></td><td><code>sendChat()</code> 헬퍼</td><td>이미 작성됨 — 가져다 쓰기</td></tr>
+  </table>
+
+  <h2>STEP 1 · chat.html 연결</h2>
+  <p>현재 목업의 입력창은 장식용 <code>&lt;div class="field"&gt;</code>예요. 먼저 <b>진짜 <code>&lt;input&gt;</code></b>로 바꾸고, <code>&lt;/body&gt;</code> 앞에 아래 스크립트를 넣으세요.</p>
+<pre><code>&lt;script src="assets/app.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  const input  = document.querySelector('#msg');     // &lt;input id="msg"&gt;
+  const sendBtn = document.querySelector('#send');    // 전송 버튼
+  const thread  = document.querySelector('.chat-wrap');
+
+  async function onSend() {
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    appendMessage('me', text);
+
+    const pos = await getLocation();                 // 위치 (거부 시 {})
+    try {
+      const out = await DrRouter.sendChat(text, pos); // POST /api/chat
+      if (out.emergency) { appendEmergency(out.reply); return; }
+      appendMessage('ai', out.reply);
+      if (out.departments.length) appendDepartments(out.departments);
+    } catch (e) {
+      appendMessage('ai', '서버 연결에 문제가 있어요. 잠시 후 다시 시도해주세요.');
+    }
+  }
+
+  sendBtn.addEventListener('click', onSend);
+  input.addEventListener('keydown', e =&gt; { if (e.key === 'Enter') onSend(); });
+
+  function getLocation() {
+    return new Promise(res =&gt; {
+      if (!navigator.geolocation) return res({});
+      navigator.geolocation.getCurrentPosition(
+        p =&gt; res({ lat: p.coords.latitude, lng: p.coords.longitude }),
+        () =&gt; res({})                                 // 거부해도 진행
+      );
+    });
+  }
+&lt;/script&gt;</code></pre>
+
+  <h2>STEP 2 · 화면 그리는 함수 (DOM)</h2>
+  <p>목업의 말풍선·추천카드 마크업을 그대로 함수로 만들면 됩니다. 뼈대 예시:</p>
+<pre><code>function appendMessage(who, text) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + who;        // 목업의 .msg.me / .msg.ai 재사용
+  div.textContent = text;
+  thread.appendChild(div);
+  thread.scrollTop = thread.scrollHeight;
+}
+
+function appendDepartments(depts) {
+  const box = document.createElement('div');
+  box.className = 'rec';
+  box.innerHTML = '&lt;div class="head"&gt;🩺 추천 진료과&lt;/div&gt;';
+  depts.forEach((d, i) =&gt; {
+    const row = document.createElement('div');
+    row.className = 'dept';
+    row.innerHTML =
+      `&lt;div&gt;&lt;div class="name"&gt;${d.name}&lt;/div&gt;`
+      + `&lt;div class="why"&gt;${d.reason}&lt;/div&gt;&lt;/div&gt;`
+      + `&lt;span class="score ${i===0?'top':''}"&gt;${Math.round(d.score*100)}%&lt;/span&gt;`;
+    box.appendChild(row);
+  });
+  thread.appendChild(box);
+}
+
+function appendEmergency(text) {
+  const div = document.createElement('div');
+  div.className = 'emg';
+  div.innerHTML = '🚨 ' + text;
+  thread.appendChild(div);
+}</code></pre>
+
+  <h2>STEP 3 · 테스트</h2>
+<pre><code>uvicorn backend.main:app --reload
+# 브라우저: http://localhost:8000/chat.html
+# 증상 입력 → 응답 말풍선 + 추천 진료과가 뜨면 성공</code></pre>
+  <div class="callout warn"><b>위치 권한</b> — <code>geolocation</code>은 <b>localhost 또는 https</b>에서만 동작해요. 발표 때 ngrok(https) 쓰면 됩니다. 권한 거부 시엔 위치 없이 진행되도록 위 코드가 처리합니다.</div>
+
   <h2>최종 체크리스트</h2>
   <ul>
     <li>□ <code>emergency_rules.py</code> 키워드 보강 + 보수적 동작 확인</li>
-    <li>□ provider 1개 선택 → <code>classify.py</code> 구조화 출력으로 Top-3 반환</li>
+    <li>□ <code>classify.py</code> 구조화 출력으로 Top-3 반환</li>
     <li>□ "진단 아님·근거 기반" 프롬프트 반영</li>
-    <li>□ <code>testset.csv</code> 20~30개 작성</li>
-    <li>□ <code>python -m eval.evaluate</code> → Top-3 정확도 측정</li>
-    <li>□ 틀린 케이스로 문서/프롬프트 1~2회 개선</li>
+    <li>□ <code>testset.csv</code> 20~30개 + <code>python -m eval.evaluate</code>로 Top-3 측정</li>
+    <li>□ <code>chat.html</code> 입력 → <code>/api/chat</code> 호출 → 말풍선·추천 표시</li>
+    <li>□ 위치 거부해도 에러 없이 진행</li>
   </ul>
 
   <h2>참고 링크</h2>

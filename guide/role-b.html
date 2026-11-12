@@ -22,13 +22,11 @@
 
 <main class="wrap">
   <p class="eyebrow">Role · 고원영 (상세 가이드)</p>
-  <h1>RAG · 프론트엔드</h1>
-  <p class="lead">두 가지를 맡습니다 — ① 진료과 문서를 Chroma에 올려 <b>검색(RAG)</b> 제공, ② 목업 화면을 백엔드에 <b>연결</b>. 둘 다 "작게" 가는 게 핵심이에요.</p>
+  <h1>RAG · 지식베이스</h1>
+  <p class="lead">진료과 문서를 Chroma에 올려 <b>검색(RAG)</b>을 제공합니다. "작게" 가는 게 핵심이에요.</p>
 
   <div class="callout"><b>RAG의 역할</b> — 분류 담당(박태준)의 <code>classify.py</code>가 <code>retrieve(query)</code>를 호출하면,
   증상과 관련된 진료과 문서를 돌려줘서 LLM이 <b>근거 있게</b> 분류하도록 돕는 것. 당신은 <code>retrieve()</code>가 잘 동작하게만 만들면 됩니다.</div>
-
-  <h1 style="font-size:26px;margin-top:40px;border-top:2px solid var(--soft);padding-top:28px">PART 1 · RAG (Chroma)</h1>
 
   <h2>STEP 1 · 진료과 문서 작성</h2>
   <p><code>data/departments/</code> 폴더에 <b>진료과 하나당 파일 하나</b>(<code>내과.md</code>, <code>정형외과.md</code> …)로 10~20개. 각 문서는 3~5문장이면 충분해요. (예시 파일 <code>data/departments/내과.md</code> 이미 있음)</p>
@@ -43,7 +41,7 @@
 
 ## 안내 포인트
 - 외상 직후 심한 부기·변형이면 응급/외과 고려.</code></pre>
-  <div class="callout"><b>왜 작게?</b> — "증상 → 진료과" 분류는 질환백과 전체가 아니라 <b>진료과별 요약 문서</b>면 충분해요. 적을수록 적재·검색이 빠르고 품질 확인도 쉽습니다.</div>
+  <div class="callout"><b>왜 작게?</b> — "증상 → 진료과" 분류는 질환백과 전체가 아니라 <b>진료과별 요약 문서</b>면 충분해요. 적을수록 적재·검색이 빠르고 품질 확인도 쉽습니다. (진료과 목록은 팀 회의에서 확정)</div>
 
   <h2>STEP 2 · 패키지 설치</h2>
 <pre><code># requirements.txt 의 주석 해제 후
@@ -120,103 +118,18 @@ python -c "from backend.rag.retriever import retrieve; print(retrieve('무릎이
   <p>결과로 <code>정형외과</code> 문서가 상위에 나오면 성공. <code>score</code>가 높을수록(1에 가까울수록) 유사.</p>
   <div class="callout ok"><b>여기까지 되면 RAG 끝.</b> 분류(박태준)가 <code>retrieve()</code>를 가져다 쓰면 됩니다. 정확도 튜닝은 문서 문구를 다듬는 정도로 충분 — 과하게 안 해도 돼요.</div>
 
-  <h1 style="font-size:26px;margin-top:48px;border-top:2px solid var(--soft);padding-top:28px">PART 2 · 프론트엔드 연결</h1>
-
-  <h2>STEP 1 · 목업 구조 파악</h2>
-  <p><code>frontend/</code>에 목업 3페이지가 있고, FastAPI가 <code>/</code>에서 서빙합니다. (서버 띄우면 <code>localhost:8000</code>에서 바로 보임) 같은 출처라 <b>CORS 걱정 없음.</b></p>
-  <table>
-    <tr><th>파일</th><th>역할</th><th>연결 작업</th></tr>
-    <tr><td><code>index.html</code></td><td>메인</td><td>그대로 (버튼 링크만)</td></tr>
-    <tr><td><code>chat.html</code></td><td>AI 문진</td><td>★ 백엔드 연결 (핵심)</td></tr>
-    <tr><td><code>hospitals.html</code></td><td>주변 병원</td><td>응답의 hospitals 렌더링</td></tr>
-    <tr><td><code>assets/app.js</code></td><td><code>sendChat()</code> 헬퍼</td><td>이미 작성됨 — 가져다 쓰기</td></tr>
-  </table>
-
-  <h2>STEP 2 · chat.html 연결</h2>
-  <p>현재 목업의 입력창은 장식용 <code>&lt;div class="field"&gt;</code>예요. 먼저 <b>진짜 <code>&lt;input&gt;</code></b>로 바꾸고, <code>&lt;/body&gt;</code> 앞에 아래 스크립트를 넣으세요.</p>
-<pre><code>&lt;script src="assets/app.js"&gt;&lt;/script&gt;
-&lt;script&gt;
-  const input  = document.querySelector('#msg');     // &lt;input id="msg"&gt;
-  const sendBtn = document.querySelector('#send');    // 전송 버튼
-  const thread  = document.querySelector('.chat-wrap');
-
-  async function onSend() {
-    const text = input.value.trim();
-    if (!text) return;
-    input.value = '';
-    appendMessage('me', text);
-
-    const pos = await getLocation();                 // 위치 (거부 시 {})
-    try {
-      const out = await DrRouter.sendChat(text, pos); // POST /api/chat
-      if (out.emergency) { appendEmergency(out.reply); return; }
-      appendMessage('ai', out.reply);
-      if (out.departments.length) appendDepartments(out.departments);
-    } catch (e) {
-      appendMessage('ai', '서버 연결에 문제가 있어요. 잠시 후 다시 시도해주세요.');
-    }
-  }
-
-  sendBtn.addEventListener('click', onSend);
-  input.addEventListener('keydown', e =&gt; { if (e.key === 'Enter') onSend(); });
-
-  function getLocation() {
-    return new Promise(res =&gt; {
-      if (!navigator.geolocation) return res({});
-      navigator.geolocation.getCurrentPosition(
-        p =&gt; res({ lat: p.coords.latitude, lng: p.coords.longitude }),
-        () =&gt; res({})                                 // 거부해도 진행
-      );
-    });
-  }
-&lt;/script&gt;</code></pre>
-
-  <h2>STEP 3 · 화면 그리는 함수 (DOM)</h2>
-  <p>목업의 말풍선·추천카드 마크업을 그대로 함수로 만들면 됩니다. 뼈대 예시:</p>
-<pre><code>function appendMessage(who, text) {
-  const div = document.createElement('div');
-  div.className = 'msg ' + who;        // 목업의 .msg.me / .msg.ai 재사용
-  div.textContent = text;
-  thread.appendChild(div);
-  thread.scrollTop = thread.scrollHeight;
-}
-
-function appendDepartments(depts) {
-  const box = document.createElement('div');
-  box.className = 'rec';
-  box.innerHTML = '&lt;div class="head"&gt;🩺 추천 진료과&lt;/div&gt;';
-  depts.forEach((d, i) =&gt; {
-    const row = document.createElement('div');
-    row.className = 'dept';
-    row.innerHTML =
-      `&lt;div&gt;&lt;div class="name"&gt;${d.name}&lt;/div&gt;`
-      + `&lt;div class="why"&gt;${d.reason}&lt;/div&gt;&lt;/div&gt;`
-      + `&lt;span class="score ${i===0?'top':''}"&gt;${Math.round(d.score*100)}%&lt;/span&gt;`;
-    box.appendChild(row);
-  });
-  thread.appendChild(box);
-}
-
-function appendEmergency(text) {
-  const div = document.createElement('div');
-  div.className = 'emg';
-  div.innerHTML = '🚨 ' + text;
-  thread.appendChild(div);
-}</code></pre>
-
-  <h2>STEP 4 · 테스트</h2>
-<pre><code>uvicorn backend.main:app --reload
-# 브라우저: http://localhost:8000/chat.html
-# 증상 입력 → 응답 말풍선 + 추천 진료과가 뜨면 성공</code></pre>
-  <div class="callout warn"><b>위치 권한</b> — <code>geolocation</code>은 <b>localhost 또는 https</b>에서만 동작해요. 발표 때 ngrok(https) 쓰면 됩니다. 권한 거부 시엔 위치 없이 진행되도록 위 코드가 처리합니다.</div>
+  <h2>협업 포인트</h2>
+  <ul>
+    <li><b>박태준(분류)</b>: <code>retrieve()</code>의 반환 형식(<code>dept</code>, <code>text</code>, <code>score</code>)을 맞춰 쓰도록 공유</li>
+    <li><b>진료과 문서 내용</b>: 분류가 자주 틀리는 과가 있으면 박태준과 상의해 해당 문서 보강</li>
+  </ul>
 
   <h2>최종 체크리스트</h2>
   <ul>
     <li>□ <code>data/departments/</code>에 진료과 문서 10~20개</li>
     <li>□ <code>python -m backend.rag.build_index</code> → "적재 완료"</li>
     <li>□ <code>retrieve("...")</code>가 관련 진료과 문서 반환</li>
-    <li>□ <code>chat.html</code> 입력 → <code>/api/chat</code> 호출 → 말풍선·추천 표시</li>
-    <li>□ 위치 거부해도 에러 없이 진행</li>
+    <li>□ 박태준(분류)이 <code>retrieve()</code>를 쓸 수 있게 형식 공유</li>
   </ul>
 
   <h2>참고 링크</h2>
