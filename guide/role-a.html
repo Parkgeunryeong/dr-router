@@ -14,10 +14,10 @@
   <a class="item" href="flow.html">프로젝트 흐름</a>
   <a class="item" href="setup.html">세팅 방법</a>
   <a class="item active" href="role-a.html">박근령</a>
-  <a class="item" href="role-b.html">박태준</a>
+  <a class="item" href="role-b.html">고원영</a>
   <a class="item" href="role-c.html">최건</a>
   <a class="item" href="role-d.html">이상현</a>
-  <a class="item" href="role-e.html">고원영</a>
+  <a class="item" href="role-e.html">박태준</a>
 </div></header>
 
 <main class="wrap">
@@ -111,8 +111,8 @@ class AgentState(TypedDict, total=False):
   <table>
     <tr><th>노드</th><th>함수</th><th>읽기</th><th>쓰기(return)</th><th>담당</th></tr>
     <tr><td>collect</td><td><code>collect_symptoms(state)</code></td><td>user_input, history</td><td>symptoms, need_more_info</td><td>박근령</td></tr>
-    <tr><td>triage</td><td><code>check_emergency(state)</code></td><td>user_input</td><td>emergency</td><td>고원영</td></tr>
-    <tr><td>classify</td><td><code>classify_department(state)</code></td><td>symptoms</td><td>departments</td><td>고원영</td></tr>
+    <tr><td>triage</td><td><code>check_emergency(state)</code></td><td>user_input</td><td>emergency</td><td>박태준</td></tr>
+    <tr><td>classify</td><td><code>classify_department(state)</code></td><td>symptoms</td><td>departments</td><td>박태준</td></tr>
     <tr><td>search</td><td><code>search_hospitals(state)</code></td><td>departments, location</td><td>hospitals</td><td>최건</td></tr>
   </table>
 
@@ -237,7 +237,7 @@ uvicorn backend.main:app --reload
     <li><a href="https://langchain-ai.github.io/langgraph/" target="_blank">LangGraph 공식 문서</a> — StateGraph, conditional edges, checkpointer</li>
   </ul>
 
-  <div class="pager"><a href="setup.html">← 세팅 방법</a><a href="role-b.html">박태준 역할 →</a></div>
+  <div class="pager"><a href="setup.html">← 세팅 방법</a><a href="role-b.html">고원영 역할 →</a></div>
 </main>
 <div class="footer">닥터라우터(Dr.Router) 개발 가이드 · 박근령 (상세)</div>
 </body>

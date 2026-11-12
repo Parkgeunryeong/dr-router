@@ -15,10 +15,10 @@
   <a class="item" href="flow.html">프로젝트 흐름</a>
   <a class="item" href="setup.html">세팅 방법</a>
   <a class="item" href="role-a.html">박근령</a>
-  <a class="item" href="role-b.html">박태준</a>
+  <a class="item" href="role-b.html">고원영</a>
   <a class="item" href="role-c.html">최건</a>
   <a class="item" href="role-d.html">이상현</a>
-  <a class="item" href="role-e.html">고원영</a>
+  <a class="item" href="role-e.html">박태준</a>
 </div></header>
 
 <main class="wrap">
@@ -59,9 +59,9 @@
     <div class="callout" style="margin-top:0"><b>⭐⭐ 가장 중요한 분기점</b> — 박근령이 <code>graph.py</code>를 <b>스텁(빈 껍데기)으로 전체 관통</b>시켜 "증상 넣으면 끝까지 도는 상태"를 공유하면, <b>그때부터 나머지 4명이 동시에</b> 자기 노드만 채우면 됩니다.</div>
     <ul>
       <li>□ <b>박근령</b>: graph 스텁 관통 → 팀 공유</li>
-      <li>□ <b>박태준</b>: 진료과 문서 작성 + Chroma 적재 (<code>retrieve()</code> 동작)</li>
+      <li>□ <b>고원영</b>: 진료과 문서 작성 + Chroma 적재 (<code>retrieve()</code> 동작)</li>
       <li>□ <b>최건</b>: 서버 실행 확인 + 심평원 API curl 테스트 → <code>hira.py</code></li>
-      <li>□ <b>고원영</b>: 응급 키워드 + 분류 프롬프트 1차</li>
+      <li>□ <b>박태준</b>: 응급 키워드 + 분류 프롬프트 1차</li>
       <li>□ <b>이상현</b>: 요구사항 정의서 완성</li>
     </ul>
   </div></div>
@@ -69,8 +69,8 @@
   <div class="step"><div class="n">2</div><div class="b">
     <h3>Phase 2 — 채우고 붙이기</h3>
     <ul>
-      <li>□ 박태준: 프론트 <code>chat.html</code> ↔ 백엔드 연결</li>
-      <li>□ 고원영: 분류 완성 → <code>evaluate</code>로 Top-3 측정</li>
+      <li>□ 고원영: 프론트 <code>chat.html</code> ↔ 백엔드 연결</li>
+      <li>□ 박태준: 분류 완성 → <code>evaluate</code>로 Top-3 측정</li>
       <li>□ 최건: E-Gen(응급실) 연동 + 발표 준비</li>
       <li>□ 박근령: 전체 통합·버그 수정</li>
     </ul>
@@ -81,17 +81,17 @@
   <table>
     <tr><th>이름</th><th>지금 1순위</th><th>상세</th></tr>
     <tr><td><b>박근령</b></td><td>State 스키마 확정·공지 → graph 스텁 관통</td><td><a href="role-a.html">가이드 →</a></td></tr>
-    <tr><td><b>박태준</b></td><td>(관통 후) 진료과 문서 10~15개 + Chroma 적재</td><td><a href="role-b.html">가이드 →</a></td></tr>
+    <tr><td><b>고원영</b></td><td>(관통 후) 진료과 문서 10~15개 + Chroma 적재</td><td><a href="role-b.html">가이드 →</a></td></tr>
     <tr><td><b>최건</b></td><td>공공데이터포털 키 신청 + 서버 실행 확인</td><td><a href="role-c.html">가이드 →</a></td></tr>
     <tr><td><b>이상현</b></td><td>요구사항 정의서 FR 초안 (진료과 목록 회의 주도)</td><td><a href="role-d.html">가이드 →</a></td></tr>
-    <tr><td><b>고원영</b></td><td>응급 키워드 보강 + 분류 프롬프트 1차</td><td><a href="role-e.html">가이드 →</a></td></tr>
+    <tr><td><b>박태준</b></td><td>응급 키워드 보강 + 분류 프롬프트 1차</td><td><a href="role-e.html">가이드 →</a></td></tr>
   </table>
 
   <h2>의존 관계 (누가 뭘 먼저 줘야 하나)</h2>
-<pre><code>박근령: State 스키마 ──→ 최건·고원영·박태준 (다 이 형식에 맞춤)
-전원: 진료과 목록 ────→ 박태준(문서)·고원영(분류·평가)·최건(진료과코드)
+<pre><code>박근령: State 스키마 ──→ 최건·박태준·고원영 (다 이 형식에 맞춤)
+전원: 진료과 목록 ────→ 고원영(문서)·박태준(분류·평가)·최건(진료과코드)
 박근령: 스텁 관통 ────→ 전원 (각자 노드 채우기 시작)
-박태준: retrieve() ───→ 고원영 (classify에서 사용)</code></pre>
+고원영: retrieve() ───→ 박태준 (classify에서 사용)</code></pre>
 
   <div class="callout ok" style="font-size:17px;margin-top:28px">
     <b>🎯 첫 주 목표 (딱 하나)</b><br>

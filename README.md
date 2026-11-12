@@ -24,20 +24,20 @@ dr-router/
 │   │   ├── state.py       #   State 스키마 (★ 공유 계약)
 │   │   └── nodes/         #   단계별 노드
 │   │       ├── collect.py     # ① 증상 수집            [박근령]
-│   │       ├── triage.py      # ② 응급도 판별           [고원영]
-│   │       ├── classify.py    # ③ 진료과 분류(RAG)      [고원영]
+│   │       ├── triage.py      # ② 응급도 판별           [박태준]
+│   │       ├── classify.py    # ③ 진료과 분류(RAG)      [박태준]
 │   │       └── search.py      # ④ 의료기관 검색(Tool)   [최건]
-│   ├── rag/               # RAG                                [박태준]
+│   ├── rag/               # RAG                                [고원영]
 │   │   ├── build_index.py #   문서→임베딩→Chroma 적재(1회)
 │   │   └── retriever.py   #   검색 함수
 │   ├── tools/             # 공공 API                           [최건]
 │   │   ├── hira.py        #   심평원
 │   │   └── egen.py        #   E-Gen
 │   └── core/
-│       └── emergency_rules.py  # 응급 차단 규칙              [고원영]
-├── frontend/              # 웹 프론트(목업 기반)               [박태준]
-├── data/                  # 질환/진료과 문서                   [박태준·고원영]
-├── eval/                  # Top-3 정확도 평가                  [고원영]
+│       └── emergency_rules.py  # 응급 차단 규칙              [박태준]
+├── frontend/              # 웹 프론트(목업 기반)               [고원영]
+├── data/                  # 질환/진료과 문서                   [고원영·박태준]
+├── eval/                  # Top-3 정확도 평가                  [박태준]
 └── docs/                  # 설계·산출물                        [이상현]
 ```
 

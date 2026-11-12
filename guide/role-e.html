@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>고원영 역할 (상세) · 닥터라우터 가이드</title>
+<title>박태준 역할 (상세) · 닥터라우터 가이드</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Poppins:wght@600;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <link rel="stylesheet" href="assets/guide.css">
 </head>
@@ -14,14 +14,14 @@
   <a class="item" href="flow.html">프로젝트 흐름</a>
   <a class="item" href="setup.html">세팅 방법</a>
   <a class="item" href="role-a.html">박근령</a>
-  <a class="item" href="role-b.html">박태준</a>
+  <a class="item" href="role-b.html">고원영</a>
   <a class="item" href="role-c.html">최건</a>
   <a class="item" href="role-d.html">이상현</a>
-  <a class="item active" href="role-e.html">고원영</a>
+  <a class="item active" href="role-e.html">박태준</a>
 </div></header>
 
 <main class="wrap">
-  <p class="eyebrow">Role · 고원영 (상세 가이드)</p>
+  <p class="eyebrow">Role · 박태준 (상세 가이드)</p>
   <h1>진료과 분류 · 응급 규칙 · 평가</h1>
   <p class="lead">AI의 "두뇌"에 해당하는 분류 품질과, 안전의 핵심인 응급 판별, 그리고 성능을 숫자로 증명하는 평가를 담당합니다.</p>
 
@@ -57,7 +57,7 @@ def is_emergency(text: str) -> bool:
   <p>(선택) LLM 보조 판단을 넣고 싶으면 triage에서 키워드로 1차 거른 뒤, 애매한 경우만 LLM에 "응급 여부"를 물어보는 2단계 구조로. 처음엔 키워드만으로 충분.</p>
 
   <h1 style="font-size:26px;margin-top:48px;border-top:2px solid var(--soft);padding-top:28px">PART 2 · 진료과 분류</h1>
-  <p>RAG 근거(박태준의 <code>retrieve()</code>) + LLM으로 <b>Top-3 진료과 + 근거</b>를 생성합니다.</p>
+  <p>RAG 근거(고원영의 <code>retrieve()</code>) + LLM으로 <b>Top-3 진료과 + 근거</b>를 생성합니다.</p>
 
   <h2>STEP 1 · LLM 설정 (GPT / OpenAI)</h2>
   <p>우리 팀은 <b>GPT(OpenAI)</b>로 갑니다. (수업에서 제공하는 GPT 키 사용) LangChain으로 연결해요.</p>
@@ -105,7 +105,7 @@ def classify_department(state):
     symptoms = state.get("symptoms", [])
     query = " ".join(symptoms) or state.get("user_input", "")
 
-    docs = retrieve(query, k=3)                        # 박태준의 RAG
+    docs = retrieve(query, k=3)                        # 고원영의 RAG
     context = "\n\n".join(f"- {d['dept']}: {d['text'][:300]}" for d in docs)
 
     result = _structured.invoke(PROMPT.format(symptoms=query, context=context))
@@ -142,7 +142,7 @@ def classify_department(state):
 
   <h2>STEP 3 · 개선 루프</h2>
   <ul>
-    <li><b>틀린 케이스(X)</b>를 보고 → 해당 진료과 문서(<code>data/departments/</code>)의 증상 설명을 보강 (박태준과 협업)</li>
+    <li><b>틀린 케이스(X)</b>를 보고 → 해당 진료과 문서(<code>data/departments/</code>)의 증상 설명을 보강 (고원영과 협업)</li>
     <li>프롬프트에 자주 헷갈리는 과 구분 기준을 한 줄 추가</li>
     <li>다시 <code>evaluate</code> → 숫자 올라가는지 확인</li>
   </ul>
@@ -167,6 +167,6 @@ def classify_department(state):
 
   <div class="pager"><a href="role-d.html">← 이상현</a><a href="index.html">홈 →</a></div>
 </main>
-<div class="footer">닥터라우터(Dr.Router) 개발 가이드 · 고원영 (상세)</div>
+<div class="footer">닥터라우터(Dr.Router) 개발 가이드 · 박태준 (상세)</div>
 </body>
 </html>

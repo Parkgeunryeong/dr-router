@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>박태준 역할 (상세) · 닥터라우터 가이드</title>
+<title>고원영 역할 (상세) · 닥터라우터 가이드</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Poppins:wght@600;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <link rel="stylesheet" href="assets/guide.css">
 </head>
@@ -14,18 +14,18 @@
   <a class="item" href="flow.html">프로젝트 흐름</a>
   <a class="item" href="setup.html">세팅 방법</a>
   <a class="item" href="role-a.html">박근령</a>
-  <a class="item active" href="role-b.html">박태준</a>
+  <a class="item active" href="role-b.html">고원영</a>
   <a class="item" href="role-c.html">최건</a>
   <a class="item" href="role-d.html">이상현</a>
-  <a class="item" href="role-e.html">고원영</a>
+  <a class="item" href="role-e.html">박태준</a>
 </div></header>
 
 <main class="wrap">
-  <p class="eyebrow">Role · 박태준 (상세 가이드)</p>
+  <p class="eyebrow">Role · 고원영 (상세 가이드)</p>
   <h1>RAG · 프론트엔드</h1>
   <p class="lead">두 가지를 맡습니다 — ① 진료과 문서를 Chroma에 올려 <b>검색(RAG)</b> 제공, ② 목업 화면을 백엔드에 <b>연결</b>. 둘 다 "작게" 가는 게 핵심이에요.</p>
 
-  <div class="callout"><b>RAG의 역할</b> — 분류 담당(고원영)의 <code>classify.py</code>가 <code>retrieve(query)</code>를 호출하면,
+  <div class="callout"><b>RAG의 역할</b> — 분류 담당(박태준)의 <code>classify.py</code>가 <code>retrieve(query)</code>를 호출하면,
   증상과 관련된 진료과 문서를 돌려줘서 LLM이 <b>근거 있게</b> 분류하도록 돕는 것. 당신은 <code>retrieve()</code>가 잘 동작하게만 만들면 됩니다.</div>
 
   <h1 style="font-size:26px;margin-top:40px;border-top:2px solid var(--soft);padding-top:28px">PART 1 · RAG (Chroma)</h1>
@@ -118,7 +118,7 @@ python -m backend.rag.build_index
 # 2) 검색 테스트 (파이썬 셸)
 python -c "from backend.rag.retriever import retrieve; print(retrieve('무릎이 붓고 시큰거려요'))"</code></pre>
   <p>결과로 <code>정형외과</code> 문서가 상위에 나오면 성공. <code>score</code>가 높을수록(1에 가까울수록) 유사.</p>
-  <div class="callout ok"><b>여기까지 되면 RAG 끝.</b> 분류(고원영)가 <code>retrieve()</code>를 가져다 쓰면 됩니다. 정확도 튜닝은 문서 문구를 다듬는 정도로 충분 — 과하게 안 해도 돼요.</div>
+  <div class="callout ok"><b>여기까지 되면 RAG 끝.</b> 분류(박태준)가 <code>retrieve()</code>를 가져다 쓰면 됩니다. 정확도 튜닝은 문서 문구를 다듬는 정도로 충분 — 과하게 안 해도 돼요.</div>
 
   <h1 style="font-size:26px;margin-top:48px;border-top:2px solid var(--soft);padding-top:28px">PART 2 · 프론트엔드 연결</h1>
 
@@ -227,6 +227,6 @@ function appendEmergency(text) {
 
   <div class="pager"><a href="role-a.html">← 박근령</a><a href="role-c.html">최건 역할 →</a></div>
 </main>
-<div class="footer">닥터라우터(Dr.Router) 개발 가이드 · 박태준 (상세)</div>
+<div class="footer">닥터라우터(Dr.Router) 개발 가이드 · 고원영 (상세)</div>
 </body>
 </html>
