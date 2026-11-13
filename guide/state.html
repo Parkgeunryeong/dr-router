@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>State 구조 · 닥터라우터 가이드</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Poppins:wght@600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="assets/guide.css">
+</head>
+<body>
+<header class="nav"><div class="nav-in">
+  <span class="brand"><span class="mark"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z" fill="#fff"/></svg></span>닥터라우터 <span class="en">Guide</span></span>
+  <a class="item" href="index.html">홈</a>
+  <a class="item" href="flow.html">프로젝트 흐름</a>
+  <a class="item active" href="state.html">State</a>
+  <a class="item" href="setup.html">세팅 방법</a>
+  <a class="item" href="role-a.html">박근령</a>
+  <a class="item" href="role-b.html">고원영</a>
+  <a class="item" href="role-c.html">최건</a>
+  <a class="item" href="role-d.html">이상현</a>
+  <a class="item" href="role-e.html">박태준</a>
+</div></header>
+
+<main class="wrap">
+  <p class="eyebrow">State · 공유 계약</p>
+  <h1>State — 에이전트의 "메모지"</h1>
+  <p class="lead">모든 노드가 같이 쓰는 <b>데이터 한 덩어리</b>예요. 이 구조를 처음에 딱 정해야 각자 병렬로 개발할 수 있어요.</p>
+
+  <div class="callout"><b>한 줄 비유</b> — State는 <b>병원 차트(메모지) 한 장</b>. 접수 → 간호사 → 의사… 거치는 곳마다 그 차트에 <b>계속 추가로 적어나가는</b> 것과 똑같아요. 아무것도 지우지 않고 추가만 해요.</div>
+
+  <h2>1. State란?</h2>
+  <p>에이전트는 <b>State라는 딕셔너리</b>를 만들어서, 각 단계(노드)가 거기에 자기 결과를 채워 넣고 다음 단계로 넘겨요.
+  <code>backend/agent/state.py</code>는 <b>"그 메모지에 어떤 칸들이 있는지"를 정의한 설계도</b>예요.</p>
+  <div class="callout"><b>왜 중요?</b> 모든 팀원이 <b>같은 메모지</b>를 쓰기 때문에, 칸 이름(<code>symptoms</code>, <code>departments</code> …)이 처음에 딱 고정돼야 각자 그 이름에 맞춰 코딩할 수 있어요. 중간에 바꾸면 전부 꼬여요.</div>
+
+  <h2>2. 칸(필드) 전체</h2>
+  <table>
+    <tr><th>칸</th><th>의미</th><th>채우는 단계 (담당)</th></tr>
+    <tr><td><code>user_input</code></td><td>이번 턴 사용자 발화</td><td>입력</td></tr>
+    <tr><td><code>history</code></td><td>이전 대화 (Memory)</td><td>입력</td></tr>
+    <tr><td><code>location</code></td><td>사용자 위치 <code>{lat, lng}</code></td><td>입력</td></tr>
+    <tr><td><code>symptoms</code></td><td>추출된 핵심 증상</td><td>① 증상 수집 <span class="badge">박근령</span></td></tr>
+    <tr><td><code>need_more_info</code></td><td>True면 되물음</td><td>① 증상 수집 <span class="badge">박근령</span></td></tr>
+    <tr><td><code>emergency</code></td><td>True면 119 분기</td><td>② 응급 판별 <span class="badge">박태준</span></td></tr>
+    <tr><td><code>departments</code></td><td>추천 진료과 Top-N + 근거</td><td>③ 분류 <span class="badge">박태준</span></td></tr>
+    <tr><td><code>hospitals</code></td><td>주변 병원/약국/응급실</td><td>④ 검색 <span class="badge">최건</span></td></tr>
+    <tr><td><code>final_message</code></td><td>최종 안내 메시지</td><td>⑤ 결과 <span class="badge">박근령</span></td></tr>
+  </table>
+
+  <h2>3. 리스트 안의 "모양" (제일 중요한 계약)</h2>
+  <p><code>departments</code>·<code>hospitals</code>는 리스트인데, <b>그 안의 항목이 어떤 모양인지</b>를 맞춰야 해요. 이게 분류(박태준)·검색(최건)이 지켜야 할 약속이에요.</p>
+<pre><code># 진료과 1개
+{ "name": "정형외과", "score": 0.9, "reason": "무릎 통증 → 관절 질환" }
+
+# 병원 1개
+{ "name": "튼튼정형외과", "dept": "정형외과",
+  "distance_m": 320, "is_open": true, "phone": "02-000-0000" }</code></pre>
+
+  <h2>4. 데이터 흐름 — 메모지가 채워지는 과정</h2>
+  <p>"무릎이 3일째 아파요" 한 번의 여정. 메모지가 <b>단계마다 추가로 채워지는</b> 걸 그대로 볼게요.</p>
+
+  <div class="step"><div class="n">0</div><div class="b">
+    <h3>시작 (입력)</h3>
+<pre><code>{ "user_input": "무릎이 3일째 아파요",
+  "location": {"lat": 37.56, "lng": 126.97} }</code></pre>
+  </div></div>
+  <div class="step"><div class="n">1</div><div class="b">
+    <h3>증상 수집 → <code>symptoms</code>, <code>need_more_info</code> 추가</h3>
+<pre><code>{ ..., "symptoms": ["무릎 통증"], "need_more_info": false }</code></pre>
+    <p>정보 부족했으면 <code>need_more_info: true</code> → 되묻고 턴 종료.</p>
+  </div></div>
+  <div class="step"><div class="n">2</div><div class="b">
+    <h3>응급 판별 → <code>emergency</code> 추가</h3>
+<pre><code>{ ..., "emergency": false }</code></pre>
+    <p><code>true</code>였으면 분류 건너뛰고 119 안내로 분기.</p>
+  </div></div>
+  <div class="step"><div class="n">3</div><div class="b">
+    <h3>진료과 분류 → <code>departments</code> 추가</h3>
+<pre><code>{ ..., "departments": [
+    {"name": "정형외과", "score": 0.9, "reason": "무릎 통증 → 관절 질환"}
+]}</code></pre>
+  </div></div>
+  <div class="step"><div class="n">4</div><div class="b">
+    <h3>병원 검색 → <code>hospitals</code> 추가</h3>
+<pre><code>{ ..., "hospitals": [
+    {"name": "튼튼정형외과", "dept": "정형외과", "distance_m": 320, "is_open": true}
+]}</code></pre>
+  </div></div>
+  <div class="step"><div class="n">5</div><div class="b">
+    <h3>결과 안내 → <code>final_message</code> 추가 → 사용자에게</h3>
+<pre><code>{ ..., "final_message": "정형외과 진료를 권해드려요. 근처 '튼튼정형외과'(320m)를 확인해보세요." }</code></pre>
+    <p>이 완성된 메모지에서 꺼내 화면에 표시 → <code>final_message</code>(말풍선), <code>departments</code>(추천카드), <code>hospitals</code>(병원목록).</p>
+  </div></div>
+
+  <h2>5. 노드 = 함수 (읽고 → 쓰고 → 넘김)</h2>
+  <p>각 노드는 <b>메모지를 받아 → 알아낸 칸만 dict로 return</b>하면 LangGraph가 자동으로 합쳐줘요.</p>
+<pre><code>def check_emergency(state):        # 메모지를 받음
+    text = state["user_input"]      # 메모지에서 '사용자 말'을 읽음
+    return {"emergency": is_emergency(text)}   # 'emergency' 칸만 적어서 돌려줌</code></pre>
+  <div class="callout"><b>규약</b> — 노드는 <b>바뀐 칸만</b> return. 전체 state를 돌려줘도 되지만, 바뀐 칸만 주는 게 깔끔해요. 서로 데이터를 직접 주고받지 않고 <b>전부 State를 통해서</b>.</div>
+
+  <h2>6. 왜 "제일 먼저" 확정해야 하나</h2>
+  <ul>
+    <li>박태준(분류)은 <code>symptoms</code>를 <b>읽고</b> <code>departments</code>를 <b>씀</b></li>
+    <li>최건(검색)은 <code>departments</code>를 <b>읽고</b> <code>hospitals</code>를 <b>씀</b></li>
+    <li>박태준(프론트)은 <code>departments</code>·<code>hospitals</code>를 <b>받아서</b> 화면에 그림</li>
+  </ul>
+  <p>→ 칸 이름이 고정돼야 각자 그 이름에 맞춰 <b>동시에</b> 개발 가능해요. 그래서 "박근령이 맨 처음 확정·공지"가 1순위.</p>
+
+  <h2>실제 코드</h2>
+  <p>확정본은 레포의 <code>backend/agent/state.py</code>에 있어요. 바꿀 땐 <b>반드시 팀에 공지</b>.</p>
+  <div class="callout warn"><b>공유 계약 파일</b> — <code>state.py</code>(박근령)와 <code>schemas.py</code>(최건, API 응답)는 서로 모양이 같아야 해요. 둘 다 함부로 바꾸지 말 것.</div>
+
+  <div class="pager"><a href="flow.html">← 프로젝트 흐름</a><a href="role-a.html">박근령 역할 →</a></div>
+</main>
+<div class="footer">닥터라우터(Dr.Router) 개발 가이드 · State 구조</div>
+</body>
+</html>
